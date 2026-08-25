@@ -3,11 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "build": "esbuild src/client/main.js --bundle --minify --format=iife --target=es2020 --outfile=public/app.js",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
     "tail": "wrangler tail"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "wrangler": "^4.42.0"
+  },
+  "dependencies": {
+    "gsap": "^3.15.0"
   }
 }
