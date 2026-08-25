@@ -2,7 +2,7 @@
 
 Monorepo de aplicaciones desplegadas en **Cloudflare Workers**.
 
-Aplicación activa: **Atarax** → <https://atarax.logidma.workers.dev>
+Aplicación activa: **Atarax** → <https://atarax.logidma.com>
 
 ---
 
@@ -49,8 +49,9 @@ navegador → Worker (src/index.js)
 | Recurso | Valor |
 |---|---|
 | Worker | `atarax` |
-| URL pública | <https://atarax.logidma.workers.dev> |
-| Subdominio de cuenta | `logidma.workers.dev` |
+| URL pública | <https://atarax.logidma.com> (dominio propio) |
+| URL de respaldo | <https://atarax.logidma.workers.dev> |
+| Zona Cloudflare | `logidma.com` |
 | Base de datos D1 | `morelia` |
 | Binding en código | `env.morelia` |
 | Región D1 | ENAM |
@@ -120,6 +121,7 @@ Token mínimo para desplegar este proyecto:
 | Account | Workers Scripts | Edit | Subir y publicar el Worker |
 | Account | D1 | Edit | Validar el binding `morelia` |
 | Account | Account Settings | Read | Resolver el `account_id` |
+| Zone | Zone | Read | Resolver la zona del dominio propio (`logidma.com`) |
 
 Restringir a una sola cuenta, ponerle TTL y **rotarlo tras compartirlo**.
 Alternativa más cerrada: omitir `Account Settings: Read` y exportar
@@ -146,7 +148,32 @@ const row = await env.morelia.prepare("SELECT * FROM tracks WHERE id = ?")
 
 ---
 
-## 6. Directrices de diseño
+## 6. Dominio
+
+El sitio se sirve en **<https://atarax.logidma.com>**, un dominio propio dentro de
+la zona `logidma.com`. El subdominio `atarax.logidma.workers.dev` sigue activo como
+respaldo: un Worker puede tener ambos a la vez.
+
+La ruta está declarada en `wrangler.jsonc`, no solo dada de alta en el panel:
+
+```jsonc
+"routes": [
+  { "pattern": "atarax.logidma.com", "custom_domain": true }
+]
+```
+
+Declararla la deja versionada: si el Worker se recrea desde cero, el despliegue
+restablece la ruta sin tocar el panel. A cambio, el token de despliegue necesita
+ver la zona — basta con `Zone: Read` sobre `logidma.com`.
+
+Cloudflare emite y renueva el certificado TLS del subdominio automáticamente.
+
+Para añadir otro dominio o subdominio, agrégalo al array `routes` con
+`"custom_domain": true` y despliega.
+
+---
+
+## 7. Directrices de diseño
 
 Estas reglas son vinculantes: toda vista nueva de Atarax debe cumplirlas.
 
@@ -237,7 +264,7 @@ Innegociable en cualquier vista:
 
 ---
 
-## 7. Skills incluidas
+## 8. Skills incluidas
 
 Viven en `.claude/skills/` y se cargan solas al trabajar en este repo.
 Como están versionadas, viajan con el repositorio: cualquier sesión o
@@ -260,7 +287,7 @@ npm install gsap    # 3.15.0
 
 ---
 
-## 8. Convenciones
+## 9. Convenciones
 
 - **Nunca** commitear secretos. Usar `wrangler secret put` o `.dev.vars`.
 - Toda consulta a D1 con `.bind()`; jamás construir SQL por concatenación.

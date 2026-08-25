@@ -4,7 +4,13 @@
   "main": "src/index.js",
   "compatibility_date": "2026-08-25",
 
-  // Despliegue gratuito en <name>.<subdominio>.workers.dev
+  // Dominio propio. Declararlo aquí lo deja versionado: si el Worker se
+  // recrea, la ruta se restablece sola en el despliegue.
+  "routes": [
+    { "pattern": "atarax.logidma.com", "custom_domain": true }
+  ],
+
+  // Se mantiene también el subdominio gratuito como respaldo.
   "workers_dev": true,
 
   // El front vive en /public y lo sirve el almacén de assets de Cloudflare.
