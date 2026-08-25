@@ -1,10 +1,15 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "sitelogidma",
+  "name": "atarax",
+  "main": "src/index.js",
   "compatibility_date": "2026-08-25",
 
-  // Añade "main" cuando exista el entry point del Worker, p. ej.:
-  // "main": "src/index.ts",
+  // Despliegue gratuito en <name>.<subdominio>.workers.dev
+  "workers_dev": true,
+
+  "observability": {
+    "enabled": true
+  },
 
   "d1_databases": [
     {
