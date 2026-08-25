@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "atarax",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-25",
+
+  // Despliegue gratuito en <name>.<subdominio>.workers.dev
+  "workers_dev": true,
+
+  "observability": {
+    "enabled": true
+  },
+
+  "d1_databases": [
+    {
+      "binding": "morelia",
+      "database_name": "morelia",
+      "database_id": "9781a444-240b-4c2d-a2b3-0cce91fcc5e6"
+    }
+  ]
+}
