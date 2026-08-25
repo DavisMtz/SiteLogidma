@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Atarax — Descubre Villas del Pedregal y Morelia</title>
+<meta name="description" content="Encuentra negocios, servicios y eventos locales dentro de Villas del Pedregal y Morelia." />
+<meta name="theme-color" content="#12100F" />
+<link rel="preload" href="/fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/inter-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<!-- Telón: se retira cuando la animación de entrada está lista -->
+<div class="boot" data-boot></div>
+
+<header class="nav" data-nav>
+  <a class="nav__brand" href="/" aria-label="Atarax, inicio">
+    <svg class="nav__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M4 26V16a12 12 0 0 1 24 0v10" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"/>
+      <path d="M11 26v-9a5 5 0 0 1 10 0v9" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" opacity=".55"/>
+    </svg>
+    <span>Atarax</span>
+  </a>
+  <nav class="nav__actions">
+    <a class="btn btn--ghost" href="/entrar" data-auth>Iniciar sesión</a>
+  </nav>
+</header>
+
+<main class="hero">
+  <div class="hero__inner">
+    <p class="eyebrow" data-eyebrow>Villas del Pedregal &middot; Morelia</p>
+
+    <h1 class="hero__title" data-title>Bienvenidos a Atarax</h1>
+
+    <p class="hero__ask" data-ask>¿Qué quieres hacer hoy?</p>
+
+    <form class="search" role="search" data-search action="/buscar" method="get">
+      <label class="sr-only" for="q">Buscar negocios, servicios y eventos</label>
+      <svg class="search__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/>
+        <path d="m16 16 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+      </svg>
+      <input class="search__input" id="q" name="q" type="search" autocomplete="off"
+             placeholder="Busca una taquería, un plomero, un concierto…" />
+      <button class="search__submit" type="submit" aria-label="Buscar">
+        <span>Buscar</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 12h15m0 0-5.5-5.5M19 12l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </form>
+
+    <div class="horizon" aria-hidden="true">
+    <!-- Acueducto de Morelia: se dibuja trazo a trazo en la entrada -->
+    <svg class="arches" viewBox="0 0 1200 320" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="archFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="var(--cantera)" stop-opacity=".55"/>
+          <stop offset="100%" stop-color="var(--cantera)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <g class="arches__g" fill="none" stroke="url(#archFade)" stroke-width="1.5">
+        <path class="arch" d="M40 320V150a60 60 0 0 1 120 0v170"/>
+        <path class="arch" d="M190 320V150a60 60 0 0 1 120 0v170"/>
+        <path class="arch" d="M340 320V150a60 60 0 0 1 120 0v170"/>
+        <path class="arch" d="M490 320V150a60 60 0 0 1 120 0v170"/>
+        <path class="arch" d="M640 320V150a60 60 0 0 1 120 0v170"/>
+        <path class="arch" d="M790 320V150a60 60 0 0 1 120 0v170"/>
+        <path class="arch" d="M940 320V150a60 60 0 0 1 120 0v170"/>
+        <path class="arch" d="M1090 320V150a60 60 0 0 1 120 0v170"/>
+        <path class="arch arch--cornice" d="M20 140h1180"/>
+      </g>
+    </svg>
+    </div>
+
+    <section class="can" aria-labelledby="can-title">
+      <h2 class="can__title" id="can-title" data-can-title>¿Qué puedes hacer?</h2>
+      <p class="can__lede" data-can-lede>
+        Puedes encontrar <em>negocios</em>, <em>servicios</em> y <em>eventos locales</em>
+        dentro de Villas del Pedregal y Morelia.
+      </p>
+
+      <ul class="cards" data-cards>
+        <li class="card">
+          <span class="card__art" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <path d="M8 20v18a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M6 20 9.5 9A2 2 0 0 1 11.4 7.6h25.2A2 2 0 0 1 38.5 9L42 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M6 20a6 6 0 0 0 12 0 6 6 0 0 0 12 0 6 6 0 0 0 12 0" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M19 40V29a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v11" fill="none" stroke="currentColor" stroke-width="2" opacity=".55"/>
+            </svg>
+          </span>
+          <h3 class="card__name">Negocios</h3>
+          <p class="card__copy">Comercios y locales del fraccionamiento y de la ciudad.</p>
+        </li>
+
+        <li class="card">
+          <span class="card__art" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <path d="M29.5 8.5a8.5 8.5 0 0 0-11.2 10.9L8.6 29.1a3.4 3.4 0 0 0 4.8 4.8l9.7-9.7A8.5 8.5 0 0 0 34 12.9l-4.6 4.6-4.9-.9-.9-4.9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M30 30l9 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+              <circle cx="11.5" cy="31.5" r="1.4" fill="currentColor"/>
+            </svg>
+          </span>
+          <h3 class="card__name">Servicios</h3>
+          <p class="card__copy">Oficios y profesionales de confianza, cerca de ti.</p>
+        </li>
+
+        <li class="card">
+          <span class="card__art" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <rect x="7" y="11" width="34" height="30" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M7 20h34" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M16 7v7M32 7v7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="17" cy="28" r="2" fill="currentColor" opacity=".75"/>
+              <circle cx="24" cy="28" r="2" fill="currentColor" opacity=".4"/>
+              <circle cx="31" cy="28" r="2" fill="currentColor" opacity=".4"/>
+              <circle cx="17" cy="34.5" r="2" fill="currentColor" opacity=".4"/>
+            </svg>
+          </span>
+          <h3 class="card__name">Eventos</h3>
+          <p class="card__copy">Lo que pasa hoy y lo que viene esta semana.</p>
+        </li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
