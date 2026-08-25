@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sitelogidma",
+  "compatibility_date": "2026-08-25",
+
+  // Añade "main" cuando exista el entry point del Worker, p. ej.:
+  // "main": "src/index.ts",
+
+  "d1_databases": [
+    {
+      "binding": "morelia",
+      "database_name": "morelia",
+      "database_id": "9781a444-240b-4c2d-a2b3-0cce91fcc5e6"
+    }
+  ]
+}
