@@ -1,3 +1,4 @@
+import { entrada } from "./entrada.js";
 import L from "leaflet";
 
 const q = (s) => document.querySelector(s);
@@ -230,6 +231,11 @@ async function arranque() {
 
   q("[data-necesita-sesion]").hidden = haySesion;
   q("[data-form]").hidden = !haySesion;
+
+  entrada([
+    [".nav", { yPercent: -60, duration: 0.6 }],
+    [".alta__caja", { y: 22, scale: 0.99, duration: 0.85 }],
+  ]);
   if (!haySesion) return;
 
   iniciarMapa();

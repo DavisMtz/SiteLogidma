@@ -3,9 +3,5 @@ node_modules/
 .dev.vars
 .env
 
-# artefacto de build (lo genera npm run build)
-public/main.js
-public/entrar.js
-public/explorar.js
-public/agregar.js
-public/mis-lugares.js
+# artefactos de build (los genera npm run build)
+public/js/

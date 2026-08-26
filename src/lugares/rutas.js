@@ -9,6 +9,7 @@ import { usuarioDeSesion } from "../auth/sesiones.js";
 import { COOKIE_SESION, leerCookie } from "../auth/cookies.js";
 import { generarIcs } from "./calendario.js";
 import { renderFicha } from "./ficha.js";
+import { paginaError } from "./error.js";
 import { origenCanonico } from "../auth/origen.js";
 import { puedeEditar, respuestaDenegada, PERMITIDO } from "./permisos.js";
 
@@ -246,11 +247,7 @@ async function paginaFicha(request, env, id, origen) {
       WHERE id = ? AND estado = 'publicado'`,
   ).bind(id).first();
 
-  if (!lugar) {
-    return new Response("Lugar no encontrado", {
-      status: 404, headers: { "content-type": "text/html; charset=utf-8" },
-    });
-  }
+  if (!lugar) return paginaError({ codigo: 404, origen });
 
   const esMio = Boolean(usuario && lugar.creado_por && lugar.creado_por === usuario.id);
   const secciones = await catalogoDe(env, id);

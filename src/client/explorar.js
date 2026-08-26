@@ -1,5 +1,9 @@
 import L from "leaflet";
 import { gsap } from "gsap";
+import { Flip } from "gsap/Flip";
+import { entrada, escalonar, reducido } from "./entrada.js";
+
+gsap.registerPlugin(Flip);
 
 const q = (s) => document.querySelector(s);
 const qa = (s) => [...document.querySelectorAll(s)];
@@ -39,7 +43,7 @@ async function cargar() {
   if (estado.tipo) p.set("tipo", estado.tipo);
   if (estado.q) p.set("q", estado.q);
 
-  q("[data-estado]").textContent = "Buscando…";
+  esqueletos();
   try {
     const resp = await fetch(`/api/lugares?${p}`);
     const datos = await resp.json();
@@ -51,6 +55,29 @@ async function cargar() {
     return;
   }
   pintar();
+}
+
+/**
+ * Esqueletos mientras llega la respuesta.
+ *
+ * Sin ellos la lista se vacía y salta de golpe al llegar los datos; con ellos
+ * el hueco ya tiene la forma de lo que va a ocupar, y el cambio se lee como
+ * carga y no como error.
+ */
+function esqueletos() {
+  const ul = q("[data-lista]");
+  const cuantos = Math.min(Math.max(estado.lugares.length, 3), 6);
+  ul.replaceChildren();
+  q("[data-vacio]").hidden = true;
+  q("[data-estado]").textContent = "";
+  for (let i = 0; i < cuantos; i++) {
+    const li = document.createElement("li");
+    li.className = "lugar lugar--esqueleto";
+    li.setAttribute("aria-hidden", "true");
+    li.innerHTML = '<span class="hueso hueso--et"></span><span class="hueso hueso--t"></span>' +
+                   '<span class="hueso hueso--p"></span><span class="hueso hueso--p hueso--corto"></span>';
+    ul.append(li);
+  }
 }
 
 /* -------------------------------------------------------------- pintado -- */
@@ -73,16 +100,27 @@ function pintar() {
 
 function pintarLista() {
   const ul = q("[data-lista]");
+
+  // Flip mide el antes y el después y anima la diferencia. Al filtrar, las
+  // tarjetas que sobreviven se DESPLAZAN a su nueva posición en vez de
+  // desaparecer y reaparecer, que es lo que hace que el filtro se sienta
+  // como un movimiento y no como una recarga.
+  const previo = reducido() ? null : Flip.getState(ul.querySelectorAll(".lugar:not(.lugar--esqueleto)"));
+
   ul.replaceChildren();
   q("[data-vacio]").hidden = estado.lugares.length > 0;
-
   for (const l of estado.lugares) ul.append(tarjeta(l));
 
-  if (estado.lugares.length && !reducido()) {
-    gsap.from(ul.children, {
-      y: 14, autoAlpha: 0, duration: 0.5, ease: "power2.out",
-      stagger: { each: 0.035, ease: "power2.out" },
+  if (!estado.lugares.length || reducido()) return;
+
+  if (previo && previo.targets.length) {
+    Flip.from(previo, {
+      duration: 0.55, ease: "power2.inOut", absolute: true,
+      onEnter: (els) => gsap.from(els, { autoAlpha: 0, scale: 0.96, y: 12, duration: 0.45, stagger: 0.03 }),
+      onLeave: (els) => gsap.to(els, { autoAlpha: 0, scale: 0.96, duration: 0.3 }),
     });
+  } else {
+    escalonar([...ul.children]);
   }
 }
 
@@ -302,8 +340,6 @@ function cambiarModo(modo) {
   pintar();
 }
 
-const reducido = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 /* -------------------------------------------------------------- arranque - */
 
 function arranque() {
@@ -332,6 +368,11 @@ function arranque() {
     t = setTimeout(() => { estado.q = e.target.value.trim(); void cargar(); }, 280);
   });
   q("[data-buscar]").addEventListener("submit", (e) => e.preventDefault());
+
+  entrada([
+    [".nav", { yPercent: -60, duration: 0.6 }],
+    [".barra", { y: -14, duration: 0.6 }],
+  ], { solapamiento: "-=0.4" });
 
   const modoInicial = params.get("modo") === "mapa" ? "mapa" : "lista";
   cambiarModo(modoInicial);

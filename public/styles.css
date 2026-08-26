@@ -878,3 +878,47 @@ textarea.acceso__input { resize: vertical; font-family: var(--font-ui); }
 }
 .ficha__duenio span { margin-right: auto; }
 .ficha__duenio .btn { padding: .4rem .8rem; font-size: var(--step--1); }
+
+/* ============================================================
+   Página de error
+   ============================================================ */
+
+.error {
+  display: grid; place-items: center; align-content: center;
+  min-height: calc(100svh - 8rem);
+  padding: 2rem var(--gutter) 5rem;
+  text-align: center;
+  position: relative;
+}
+.error__arco {
+  width: min(15rem, 45vw); height: auto;
+  color: var(--cantera); opacity: .5;
+  margin-bottom: 1.5rem;
+}
+.error__codigo {
+  margin: 0; font-size: var(--step--1);
+  letter-spacing: .2em; color: var(--cantera);
+}
+.error__titulo {
+  margin: .5rem 0 .7rem;
+  font-family: var(--font-display);
+  font-size: var(--step-2); font-weight: 300; letter-spacing: -.02em;
+}
+.error__mensaje { margin: 0 0 2rem; color: var(--text-muted); max-width: 28rem; }
+.error__salidas { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }
+
+/* Esqueletos de carga -------------------------------------------- */
+.lugar--esqueleto { pointer-events: none; gap: .6rem; }
+.hueso {
+  display: block; border-radius: 6px;
+  background: linear-gradient(90deg,
+    rgba(245,240,235,.045) 25%, rgba(245,240,235,.085) 37%, rgba(245,240,235,.045) 63%);
+  background-size: 400% 100%;
+  animation: latido 1.4s ease infinite;
+}
+.hueso--et { width: 5.5rem; height: .7rem; }
+.hueso--t  { width: 72%;    height: 1.15rem; }
+.hueso--p  { width: 100%;   height: .72rem; }
+.hueso--corto { width: 55%; }
+@keyframes latido { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .hueso { animation: none; } }

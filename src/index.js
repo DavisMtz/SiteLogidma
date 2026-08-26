@@ -8,6 +8,8 @@
 
 import { rutasAuth } from "./auth/rutas.js";
 import { rutasLugares } from "./lugares/rutas.js";
+import { paginaError } from "./lugares/error.js";
+import { rutasSeo } from "./seo.js";
 
 const SECURITY_HEADERS = {
   "content-security-policy": [
@@ -62,8 +64,19 @@ export default {
         );
       }
 
+      const seo = await rutasSeo(request, env, url);
+      if (seo) return withSecurityHeaders(seo);
+
       // Todo lo demás lo resuelve el almacén de assets.
-      return withSecurityHeaders(await env.ASSETS.fetch(request));
+      const asset = await env.ASSETS.fetch(request);
+
+      // Un 404 del almacén llega sin estilo: se sustituye por la página con
+      // marca. Un 404 en texto plano parece un sitio caído, no una ruta que
+      // no existe.
+      if (asset.status === 404 && !url.pathname.includes(".")) {
+        return withSecurityHeaders(paginaError({ codigo: 404 }));
+      }
+      return withSecurityHeaders(asset);
     } catch (err) {
       console.error("unhandled", { path: url.pathname, message: String(err) });
       return withSecurityHeaders(

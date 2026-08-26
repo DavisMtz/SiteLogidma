@@ -178,6 +178,13 @@ export function renderFicha(l, secciones, sesion, origen, esMio = false) {
 <meta property="og:title" content="${e(l.nombre)}" />
 <meta property="og:type" content="${esEvento ? "article" : "website"}" />
 <meta property="og:description" content="${e((l.descripcion || "").slice(0, 155))}" />
+<meta property="og:site_name" content="Atarax" />
+<meta property="og:locale" content="es_MX" />
+<meta property="og:url" content="${e(origen)}/lugar/${e(l.id)}" />
+<meta property="og:image" content="${e(origen)}/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preload" href="/fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/fonts/inter-normal.woff2" as="font" type="font/woff2" crossorigin />
@@ -227,6 +234,7 @@ export function renderFicha(l, secciones, sesion, origen, esMio = false) {
   ${catalogoHtml}
 </main>
 
+<script type="module" src="/js/ficha.js"></script>
 </body>
 </html>`;
 }

@@ -1,3 +1,5 @@
+import { entrada, escalonar } from "./entrada.js";
+
 const q = (s) => document.querySelector(s);
 
 const TIPO = { negocio: "Negocio", servicio: "Servicio", evento: "Evento" };
@@ -96,6 +98,7 @@ async function cargar() {
   for (const l of datos.lugares) {
     lista.append(tarjeta(l, borrar, cambiarEstado));
   }
+  escalonar([...lista.children]);
 }
 
 async function borrar(l, boton) {
@@ -125,5 +128,14 @@ async function cambiarEstado(l, boton) {
   } else { aviso("[data-error]", "No pudimos cambiarlo."); boton.disabled = false; }
 }
 
-if (document.readyState !== "loading") void cargar();
-else document.addEventListener("DOMContentLoaded", () => void cargar(), { once: true });
+function arranque() {
+  entrada([
+    [".nav", { yPercent: -60, duration: 0.6 }],
+    [".ficha__titulo", { y: 18 }],
+    [".ficha__desc", { y: 14 }],
+  ]);
+  void cargar();
+}
+
+if (document.readyState !== "loading") arranque();
+else document.addEventListener("DOMContentLoaded", arranque, { once: true });
