@@ -4,6 +4,7 @@ const q = (s) => document.querySelector(s);
 const CENTRO = [19.7455, -101.2560];
 
 let mapa, marcador;
+let editandoId = null;   // null = alta, id = edición
 
 function iniciarMapa() {
   mapa = L.map(q("[data-mapa-picker]"), { center: CENTRO, zoom: 14 });
@@ -52,6 +53,71 @@ function limpiarCoords() {
   q("[data-limpiar]").hidden = true;
 }
 
+
+/* ------------------------------------------------- editor de catálogo --- */
+
+/** El editor mantiene el estado en el DOM y lo lee al enviar: sin estado
+ *  paralelo que pueda desincronizarse de lo que la persona ve. */
+function filaItem(item = {}) {
+  const li = document.createElement("li");
+  li.className = "item-edit";
+  li.innerHTML = `
+    <input class="acceso__input" data-i-nombre placeholder="Nombre del ítem" maxlength="120" />
+    <input class="acceso__input item-edit__precio" data-i-precio placeholder="Precio" inputmode="decimal" />
+    <input class="acceso__input" data-i-unidad placeholder="Unidad (por hora…)" maxlength="30" />
+    <label class="item-edit__desde"><input type="checkbox" data-i-desde /> desde</label>
+    <button class="btn btn--ghost item-edit__quitar" type="button" aria-label="Quitar ítem">×</button>`;
+  li.querySelector("[data-i-nombre]").value = item.nombre ?? "";
+  li.querySelector("[data-i-precio]").value =
+    item.precio_centavos != null ? (item.precio_centavos / 100).toString() : "";
+  li.querySelector("[data-i-unidad]").value = item.unidad ?? "";
+  li.querySelector("[data-i-desde]").checked = Boolean(item.desde);
+  li.querySelector(".item-edit__quitar").addEventListener("click", () => li.remove());
+  return li;
+}
+
+function bloqueSeccion(sec = {}) {
+  const div = document.createElement("div");
+  div.className = "seccion-edit";
+  div.innerHTML = `
+    <div class="seccion-edit__cab">
+      <input class="acceso__input" data-s-nombre placeholder="Nombre de la sección" maxlength="80" />
+      <button class="btn btn--ghost" type="button" data-quitar-seccion aria-label="Quitar sección">×</button>
+    </div>
+    <ul class="items-edit" data-items></ul>
+    <button class="btn btn--ghost" type="button" data-add-item>+ Agregar ítem</button>`;
+  div.querySelector("[data-s-nombre]").value = sec.nombre ?? "";
+  const ul = div.querySelector("[data-items]");
+  for (const it of sec.items ?? []) ul.append(filaItem(it));
+  if (!(sec.items ?? []).length) ul.append(filaItem());
+
+  div.querySelector("[data-add-item]").addEventListener("click", () => ul.append(filaItem()));
+  div.querySelector("[data-quitar-seccion]").addEventListener("click", () => div.remove());
+  return div;
+}
+
+function leerCatalogo() {
+  return [...document.querySelectorAll(".seccion-edit")].map((div) => ({
+    nombre: div.querySelector("[data-s-nombre]").value.trim(),
+    items: [...div.querySelectorAll(".item-edit")].map((li) => ({
+      nombre: li.querySelector("[data-i-nombre]").value.trim(),
+      precio: li.querySelector("[data-i-precio]").value.trim(),
+      unidad: li.querySelector("[data-i-unidad]").value.trim(),
+      desde: li.querySelector("[data-i-desde]").checked,
+    })).filter((i) => i.nombre),
+  })).filter((s) => s.nombre);
+}
+
+async function guardarCatalogo(lugarId) {
+  const secciones = leerCatalogo();
+  if (!secciones.length) return;
+  await fetch(`/api/lugares/${lugarId}/catalogo`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ secciones }),
+  });
+}
+
 async function enviar(e) {
   e.preventDefault();
   const form = e.target;
@@ -68,11 +134,12 @@ async function enviar(e) {
     return;
   }
 
+  const editando = Boolean(editandoId);
   boton.disabled = true;
-  boton.textContent = "Publicando…";
+  boton.textContent = editando ? "Guardando…" : "Publicando…";
   try {
-    const resp = await fetch("/api/lugares", {
-      method: "POST",
+    const resp = await fetch(editando ? `/api/lugares/${editandoId}` : "/api/lugares", {
+      method: editando ? "PATCH" : "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(datos),
     });
@@ -81,23 +148,76 @@ async function enviar(e) {
     if (resp.status === 401) {
       error.textContent = "Tu sesión expiró. Vuelve a iniciar sesión.";
       error.hidden = false;
+    } else if (resp.status === 403) {
+      error.textContent = "Solo quien lo publicó puede editarlo.";
+      error.hidden = false;
     } else if (!resp.ok) {
-      error.textContent = cuerpo.error ?? "No pudimos publicar el lugar.";
+      error.textContent = cuerpo.error ?? "No pudimos guardar el lugar.";
       error.hidden = false;
     } else {
-      ok.textContent = "Publicado. Ya aparece en Explorar.";
+      // El catálogo se guarda aparte, ya con el id: en un alta no existe hasta
+      // que el lugar se crea.
+      const id = editandoId ?? cuerpo.lugar?.id;
+      if (id) await guardarCatalogo(id);
+
+      ok.textContent = editando
+        ? "Guardado."
+        : "Publicado. Ya aparece en Explorar.";
       ok.hidden = false;
-      form.reset();
-      limpiarCoords();
-      q("[data-solo-evento]").hidden = true;
+
+      if (!editando) {
+        form.reset();
+        limpiarCoords();
+        q("[data-solo-evento]").hidden = true;
+        q("[data-secciones]").replaceChildren();
+      }
     }
   } catch {
     error.textContent = "No hay conexión. Inténtalo de nuevo.";
     error.hidden = false;
   } finally {
     boton.disabled = false;
-    boton.textContent = "Publicar lugar";
+    boton.textContent = editando ? "Guardar cambios" : "Publicar lugar";
   }
+}
+
+/** Rellena el formulario con un lugar existente. */
+async function cargarParaEditar(id) {
+  const [rLugar, rCat] = await Promise.all([
+    fetch(`/api/lugares/${id}`),
+    fetch(`/api/lugares/${id}/catalogo`),
+  ]);
+  if (!rLugar.ok) return false;
+
+  const { lugar, puedo_editar } = await rLugar.json();
+  // No es tuyo: no se rellena nada. El servidor lo rechazaría igual, pero
+  // ofrecer un formulario que va a fallar es peor que no ofrecerlo.
+  if (!puedo_editar) return false;
+  const { secciones = [] } = await rCat.json().catch(() => ({}));
+
+  const form = q("[data-form]");
+  for (const campo of ["nombre", "categoria", "descripcion", "direccion", "colonia",
+                       "telefono", "whatsapp", "horario", "sitio_web",
+                       "inicia_en", "termina_en"]) {
+    if (form[campo] && lugar[campo] != null) form[campo].value = lugar[campo];
+  }
+
+  const radio = form.querySelector(`[name="tipo"][value="${lugar.tipo}"]`);
+  if (radio) { radio.checked = true; q("[data-solo-evento]").hidden = lugar.tipo !== "evento"; }
+
+  if (lugar.lat != null && lugar.lng != null) {
+    colocar(lugar.lat, lugar.lng);
+    mapa.setView([lugar.lat, lugar.lng], 16);
+  }
+
+  const cont = q("[data-secciones]");
+  cont.replaceChildren();
+  for (const sec of secciones) cont.append(bloqueSeccion(sec));
+
+  q("[data-titulo]").textContent = "Editar lugar";
+  q("[data-lede]").textContent = "Cambia lo que necesites. Solo tú puedes editarlo.";
+  q("[data-submit]").textContent = "Guardar cambios";
+  return true;
 }
 
 async function arranque() {
@@ -115,6 +235,22 @@ async function arranque() {
   iniciarMapa();
   q("[data-limpiar]").addEventListener("click", limpiarCoords);
   q("[data-form]").addEventListener("submit", enviar);
+  q("[data-add-seccion]").addEventListener("click", () => {
+    q("[data-secciones]").append(bloqueSeccion());
+  });
+
+  // ?id=… entra en modo edición.
+  const id = new URLSearchParams(location.search).get("id");
+  if (id) {
+    editandoId = id;
+    const ok = await cargarParaEditar(id);
+    if (!ok) {
+      editandoId = null;
+      const e = q("[data-error]");
+      e.textContent = "No encontramos ese lugar, o no lo publicaste tú.";
+      e.hidden = false;
+    }
+  }
 
   // Las fechas solo tienen sentido en eventos.
   for (const r of document.querySelectorAll('[name="tipo"]')) {

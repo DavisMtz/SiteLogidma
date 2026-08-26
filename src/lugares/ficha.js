@@ -120,7 +120,7 @@ function limpiar(o) {
   return JSON.parse(JSON.stringify(o, (k, v) => (v === undefined ? undefined : v)));
 }
 
-export function renderFicha(l, secciones, sesion, origen) {
+export function renderFicha(l, secciones, sesion, origen, esMio = false) {
   const esEvento = l.tipo === "evento";
   const jsonld = JSON.stringify(limpiar(datosEstructurados(l, secciones, origen)));
   const repeticion = repeticionEnPalabras(l.recurrencia);
@@ -198,6 +198,8 @@ export function renderFicha(l, secciones, sesion, origen) {
 </header>
 
 <main class="ficha">
+  ${esMio ? `<p class="ficha__duenio"><span>Publicaste este lugar</span> <a class="btn btn--ghost" href="/agregar?id=${e(l.id)}">Editar</a> <a class="btn btn--ghost" href="/mis-lugares">Mis lugares</a></p>` : ""}
+
   <p class="ficha__migas"><a href="/explorar?tipo=${e(l.tipo)}">${TIPO_ES[l.tipo]}s</a> ${l.categoria ? `· ${e(l.categoria)}` : ""}</p>
 
   <h1 class="ficha__titulo">${e(l.nombre)}</h1>

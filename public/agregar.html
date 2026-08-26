@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Agregar un lugar — Atarax</title>
+<meta name="robots" content="noindex" />
 <meta name="theme-color" content="#12100F" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preload" href="/fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin />
@@ -21,13 +22,16 @@
     </svg>
     <span>Atarax</span>
   </a>
-  <a class="btn btn--ghost" href="/explorar">Explorar</a>
+  <nav class="nav__actions">
+    <a class="btn btn--ghost" href="/mis-lugares">Mis lugares</a>
+    <a class="btn btn--ghost" href="/explorar">Explorar</a>
+  </nav>
 </header>
 
 <main class="alta">
   <div class="alta__caja">
-    <h1 class="alta__titulo">Agregar un lugar</h1>
-    <p class="alta__lede">Comparte un negocio, un servicio o un evento de Villas del Pedregal o Morelia.</p>
+    <h1 class="alta__titulo" data-titulo>Agregar un lugar</h1>
+    <p class="alta__lede" data-lede>Comparte un negocio, un servicio o un evento de Villas del Pedregal o Morelia.</p>
 
     <p class="aviso" role="alert" data-error hidden></p>
     <p class="entrar__ok" role="status" data-ok hidden></p>
@@ -122,6 +126,16 @@
           <button class="btn btn--ghost" type="button" data-limpiar hidden>Quitar</button>
         </div>
         <input type="hidden" name="lat" /><input type="hidden" name="lng" />
+      </fieldset>
+
+      <fieldset class="campo">
+        <legend data-catalogo-titulo>Catálogo</legend>
+        <p class="campo__ayuda">
+          Agrupa lo que ofreces en secciones: «Cortes», «Instalación», «Primera parte».
+          Cada sección lleva sus propios ítems con precio. Es opcional.
+        </p>
+        <div class="secciones" data-secciones></div>
+        <button class="btn btn--ghost" type="button" data-add-seccion>+ Agregar sección</button>
       </fieldset>
 
       <button class="acceso__submit" type="submit" data-submit>Publicar lugar</button>

@@ -10,6 +10,7 @@ import { COOKIE_SESION, leerCookie } from "../auth/cookies.js";
 import { generarIcs } from "./calendario.js";
 import { renderFicha } from "./ficha.js";
 import { origenCanonico } from "../auth/origen.js";
+import { puedeEditar, respuestaDenegada, PERMITIDO } from "./permisos.js";
 
 const TIPOS = new Set(["negocio", "servicio", "evento"]);
 const LIMITE = 200;
@@ -50,8 +51,15 @@ export async function rutasLugares(request, env, ctx, url) {
     return Response.json({ error: "método no permitido" }, { status: 405 });
   }
 
+  if (ruta === "/api/mis-lugares") return await mios(request, env);
+
   const detalle = ruta.match(/^\/api\/lugares\/([A-Za-z0-9-]{36})$/);
-  if (detalle) return await verUno(request, env, detalle[1]);
+  if (detalle) {
+    if (request.method === "GET")    return await verUno(request, env, detalle[1]);
+    if (request.method === "PATCH")  return await editar(request, env, detalle[1]);
+    if (request.method === "DELETE") return await borrar(request, env, detalle[1]);
+    return Response.json({ error: "método no permitido" }, { status: 405 });
+  }
 
   const cat = ruta.match(/^\/api\/lugares\/([A-Za-z0-9-]{36})\/catalogo$/);
   if (cat) {
@@ -127,13 +135,22 @@ async function listar(request, env, url) {
 }
 
 async function verUno(request, env, id) {
-  const sesion = await haySesion(request, env);
+  const usuario = await usuarioDeSesion(env.morelia, leerCookie(request, COOKIE_SESION));
+  const sesion = Boolean(usuario);
+
   const fila = await env.morelia.prepare(
-    `SELECT ${campos(sesion)} FROM lugares WHERE id = ? AND estado = 'publicado'`,
+    `SELECT ${campos(sesion)}, creado_por FROM lugares WHERE id = ? AND estado = 'publicado'`,
   ).bind(id).first();
-  return fila
-    ? Response.json({ lugar: fila, sesion })
-    : Response.json({ error: "no encontrado" }, { status: 404 });
+
+  if (!fila) return Response.json({ error: "no encontrado" }, { status: 404 });
+
+  // El cliente necesita saber si puede editar ANTES de pintar un formulario:
+  // sin esto ofrecería editar a cualquiera y el rechazo llegaría al guardar,
+  // que es tarde y confunde. La decisión la sigue tomando el servidor.
+  const puedo_editar = Boolean(usuario && fila.creado_por && fila.creado_por === usuario.id);
+  delete fila.creado_por;   // dato interno: no sale al cliente
+
+  return Response.json({ lugar: fila, sesion, puedo_editar });
 }
 
 async function crear(request, env) {
@@ -222,9 +239,10 @@ async function catalogoDe(env, lugarId) {
 /* ---------------------------------------------------------- ficha ------- */
 
 async function paginaFicha(request, env, id, origen) {
-  const sesion = await haySesion(request, env);
+  const usuario = await usuarioDeSesion(env.morelia, leerCookie(request, COOKIE_SESION));
+  const sesion = Boolean(usuario);
   const lugar = await env.morelia.prepare(
-    `SELECT ${campos(sesion)}, todo_el_dia, recurrencia FROM lugares
+    `SELECT ${campos(sesion)}, todo_el_dia, recurrencia, creado_por FROM lugares
       WHERE id = ? AND estado = 'publicado'`,
   ).bind(id).first();
 
@@ -234,8 +252,9 @@ async function paginaFicha(request, env, id, origen) {
     });
   }
 
+  const esMio = Boolean(usuario && lugar.creado_por && lugar.creado_por === usuario.id);
   const secciones = await catalogoDe(env, id);
-  return new Response(renderFicha(lugar, secciones, sesion, origen), {
+  return new Response(renderFicha(lugar, secciones, sesion, origen, esMio), {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
 }
@@ -270,15 +289,8 @@ async function descargarIcs(env, id, origen) {
  * El borrado en cascada limpia los ítems de las secciones eliminadas.
  */
 async function guardarCatalogo(request, env, lugarId) {
-  const usuario = await usuarioDeSesion(env.morelia, leerCookie(request, COOKIE_SESION));
-  if (!usuario) return Response.json({ error: "necesitas iniciar sesión" }, { status: 401 });
-
-  const duenio = await env.morelia.prepare("SELECT creado_por FROM lugares WHERE id = ?")
-    .bind(lugarId).first();
-  if (!duenio) return Response.json({ error: "no encontrado" }, { status: 404 });
-  if (duenio.creado_por !== usuario.id) {
-    return Response.json({ error: "solo el autor puede editar este catálogo" }, { status: 403 });
-  }
+  const { veredicto } = await puedeEditar(request, env, lugarId);
+  if (veredicto !== PERMITIDO) return respuestaDenegada(veredicto);
 
   const cuerpo = await request.json().catch(() => null);
   const secciones = Array.isArray(cuerpo?.secciones) ? cuerpo.secciones : null;
@@ -324,4 +336,90 @@ function centavos(v) {
   if (v === undefined || v === null || v === "") return null;
   const n = Number(String(v).replace(/[^0-9.]/g, ""));
   return Number.isFinite(n) ? Math.round(n * 100) : null;
+}
+
+
+/* ------------------------------------------------- edición y permisos --- */
+
+/** Lugares del usuario, incluidos los ocultos: son suyos y debe verlos. */
+async function mios(request, env) {
+  const usuario = await usuarioDeSesion(env.morelia, leerCookie(request, COOKIE_SESION));
+  if (!usuario) return Response.json({ error: "necesitas iniciar sesión" }, { status: 401 });
+
+  const { results } = await env.morelia.prepare(
+    `SELECT ${CAMPOS_COMPLETOS}, estado,
+            (SELECT COUNT(*) FROM catalogo_secciones s WHERE s.lugar_id = lugares.id) AS secciones
+       FROM lugares WHERE creado_por = ? ORDER BY creado_en DESC`,
+  ).bind(usuario.id).all();
+
+  return Response.json({ lugares: results ?? [], total: results?.length ?? 0 });
+}
+
+/** Campos que el dueño puede cambiar. La lista es blanca a propósito: así
+ *  añadir una columna al esquema no la vuelve editable por accidente. */
+const EDITABLES = {
+  nombre:      (v) => texto(v, 120),
+  descripcion: (v) => texto(v, 600),
+  categoria:   (v) => texto(v, 60),
+  direccion:   (v) => texto(v, 200),
+  colonia:     (v) => texto(v, 80),
+  telefono:    (v) => texto(v, 25),
+  whatsapp:    (v) => texto(v, 25),
+  sitio_web:   (v) => texto(v, 200),
+  horario:     (v) => texto(v, 120),
+  inicia_en:   (v) => texto(v, 25),
+  termina_en:  (v) => texto(v, 25),
+  recurrencia: (v) => texto(v, 120),
+  lat:         (v) => numero(v),
+  lng:         (v) => numero(v),
+  todo_el_dia: (v) => (v ? 1 : 0),
+  estado:      (v) => (v === "oculto" ? "oculto" : "publicado"),
+};
+
+async function editar(request, env, id) {
+  const { veredicto, lugar } = await puedeEditar(request, env, id);
+  if (veredicto !== PERMITIDO) return respuestaDenegada(veredicto);
+
+  const cuerpo = await request.json().catch(() => null);
+  if (!cuerpo || typeof cuerpo !== "object") {
+    return Response.json({ error: "cuerpo no válido" }, { status: 400 });
+  }
+
+  // Se valida contra la mezcla de la fila COMPLETA y lo enviado: una edición
+  // parcial no puede dejar el registro en un estado que la creación habría
+  // rechazado, pero tampoco debe fallar por campos que no se están tocando —
+  // editar el nombre de un evento no puede exigir reenviar su fecha.
+  const actual = await env.morelia.prepare(
+    `SELECT ${CAMPOS_COMPLETOS} FROM lugares WHERE id = ?`,
+  ).bind(id).first();
+  const propuesto = { ...actual, tipo: lugar.tipo, ...cuerpo };
+  const error = validar(propuesto);
+  if (error) return Response.json({ error }, { status: 400 });
+
+  const sets = [], valores = [];
+  for (const [campo, limpiar] of Object.entries(EDITABLES)) {
+    if (!(campo in cuerpo)) continue;          // solo lo que se envía
+    sets.push(`${campo} = ?`);
+    valores.push(limpiar(cuerpo[campo]));
+  }
+  if (!sets.length) return Response.json({ error: "nada que cambiar" }, { status: 400 });
+
+  sets.push("actualizado_en = datetime('now')");
+  valores.push(id);
+
+  await env.morelia.prepare(`UPDATE lugares SET ${sets.join(", ")} WHERE id = ?`)
+    .bind(...valores).run();
+
+  const actualizado = await env.morelia.prepare(`SELECT ${CAMPOS_COMPLETOS}, estado FROM lugares WHERE id = ?`)
+    .bind(id).first();
+  return Response.json({ lugar: actualizado });
+}
+
+async function borrar(request, env, id) {
+  const { veredicto } = await puedeEditar(request, env, id);
+  if (veredicto !== PERMITIDO) return respuestaDenegada(veredicto);
+
+  // El catálogo cae con el lugar por ON DELETE CASCADE.
+  await env.morelia.prepare("DELETE FROM lugares WHERE id = ?").bind(id).run();
+  return Response.json({ ok: true });
 }

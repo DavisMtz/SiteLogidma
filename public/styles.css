@@ -810,3 +810,71 @@ textarea.acceso__input { resize: vertical; font-family: var(--font-ui); }
 .lugar { position: relative; }
 .lugar:hover .lugar__enlace { color: var(--cantera); }
 .lugar__ver, .lugar__web, .candado a { position: relative; z-index: 1; }
+
+/* ============================================================
+   Mis lugares y edición
+   ============================================================ */
+
+.mios { max-width: 60rem; margin-inline: auto; padding: clamp(1.5rem, 4vh, 3rem) var(--gutter) 5rem; }
+.mios .ficha__titulo { font-size: var(--step-2); }
+.mios .lugares { margin-top: 1.75rem; }
+
+.acciones { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; position: relative; z-index: 1; }
+.acciones .btn { padding: .45rem .85rem; font-size: var(--step--1); }
+
+.etiqueta {
+  padding: .15rem .5rem; border-radius: 999px;
+  font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
+}
+.etiqueta--oculto {
+  background: rgba(167, 154, 145, .16);
+  color: var(--text-muted);
+}
+
+.btn--peligro { color: var(--cantera-deep); border: 1px solid rgba(185, 104, 114, .45); background: transparent; }
+.btn--peligro:hover { background: rgba(185, 104, 114, .14); color: var(--cantera); border-color: var(--cantera-deep); }
+
+/* Editor de catálogo ---------------------------------------------- */
+.secciones { display: grid; gap: 1rem; margin-bottom: .7rem; }
+
+.seccion-edit {
+  display: grid; gap: .6rem;
+  padding: 1rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.seccion-edit__cab { display: flex; gap: .5rem; align-items: center; }
+.seccion-edit__cab .acceso__input { flex: 1; }
+.seccion-edit__cab .btn { flex: none; padding: .5rem .8rem; line-height: 1; }
+
+.items-edit { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+
+.item-edit {
+  display: grid; gap: .4rem;
+  grid-template-columns: minmax(0, 2fr) minmax(0, .9fr) minmax(0, 1.1fr) auto auto;
+  align-items: center;
+}
+.item-edit .acceso__input { padding: .55rem .7rem; font-size: var(--step--1); }
+.item-edit__precio { font-variant-numeric: tabular-nums; }
+.item-edit__desde {
+  display: inline-flex; align-items: center; gap: .3rem;
+  color: var(--text-faint); font-size: var(--step--1); white-space: nowrap;
+}
+.item-edit__quitar { padding: .45rem .7rem; line-height: 1; }
+
+@media (max-width: 42rem) {
+  .item-edit { grid-template-columns: 1fr 1fr; }
+  .item-edit .acceso__input:first-child { grid-column: 1 / -1; }
+}
+
+.ficha__duenio {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .6rem;
+  margin: 0 0 1.25rem; padding: .7rem .9rem;
+  background: rgba(156, 143, 199, .10);
+  border: 1px solid rgba(156, 143, 199, .28);
+  border-radius: 12px;
+  color: var(--text-muted); font-size: var(--step--1);
+}
+.ficha__duenio span { margin-right: auto; }
+.ficha__duenio .btn { padding: .4rem .8rem; font-size: var(--step--1); }

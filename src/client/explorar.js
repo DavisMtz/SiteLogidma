@@ -346,10 +346,12 @@ async function pintarSesion() {
     const r = await fetch("/api/auth/yo");
     const d = await r.json();
     if (!d?.sesion) return;
-    const s = document.createElement("span");
-    s.className = "nav__correo";
-    s.textContent = d.usuario.nombre || d.usuario.email;
-    enlace.replaceWith(s);
+    // Con sesión, el acceso directo útil es a lo propio, no al correo.
+    const mios = document.createElement("a");
+    mios.className = "btn btn--ghost";
+    mios.href = "/mis-lugares";
+    mios.textContent = "Mis lugares";
+    enlace.replaceWith(mios);
   } catch { /* sin red: se queda "Iniciar sesión" */ }
 }
 

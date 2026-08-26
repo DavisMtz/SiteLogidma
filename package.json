@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/client/main.js src/client/entrar.js src/client/explorar.js src/client/agregar.js --bundle --minify --format=iife --target=es2020 --outdir=public",
+    "build": "esbuild src/client/main.js src/client/entrar.js src/client/explorar.js src/client/agregar.js src/client/mis-lugares.js --bundle --minify --format=iife --target=es2020 --outdir=public",
     "dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "tail": "wrangler tail"
