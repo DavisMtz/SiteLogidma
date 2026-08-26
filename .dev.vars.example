@@ -1,0 +1,11 @@
+# Copia a .dev.vars (gitignorado) para desarrollo local.
+# En producción estos valores van como secretos:
+#   npx wrangler secret put GOOGLE_CLIENT_ID
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET
+
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+
+# Origen local, para que el enlace mágico apunte a tu servidor de desarrollo
+# en vez de a producción.
+ORIGENES_PERMITIDOS="http://localhost:8787"

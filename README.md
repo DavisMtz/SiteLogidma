@@ -17,15 +17,29 @@ SiteLogidma/
 │
 ├── public/                    ← se sirve desde Static Assets de Cloudflare
 │   ├── index.html             ← vista de inicio
+│   ├── entrar.html            ← pantalla de acceso
 │   ├── styles.css             ← tokens y sistema de diseño
 │   ├── favicon.svg
-│   ├── app.js                 ← BUILD: lo genera esbuild, no se versiona
+│   ├── main.js, entrar.js     ← BUILD: los genera esbuild, no se versionan
 │   └── fonts/                 ← Fraunces e Inter auto-hospedadas (SIL OFL)
 │
+├── migrations/
+│   └── 0001_auth.sql          ← esquema de autenticación para D1
+│
 ├── src/
-│   ├── index.js               ← Worker: rutas /api/* y cabeceras de seguridad
+│   ├── index.js               ← Worker: rutas y cabeceras de seguridad
+│   ├── auth/                  ← autenticación
+│   │   ├── rutas.js           ← endpoints
+│   │   ├── sesiones.js        ← sesiones y usuarios en D1
+│   │   ├── enlace-magico.js   ← tokens de un solo uso y correo
+│   │   ├── google.js          ← OAuth 2.0
+│   │   ├── origen.js          ← origen canónico (anti inyección de Host)
+│   │   ├── cookies.js         ← cookie __Host- de sesión
+│   │   ├── crypto.js          ← tokens con Web Crypto
+│   │   └── limites.js         ← límite de intentos
 │   └── client/
-│       └── main.js            ← orquestación GSAP de la entrada
+│       ├── main.js            ← orquestación GSAP del inicio
+│       └── entrar.js          ← pantalla de acceso
 │
 └── .claude/
     └── skills/                ← instrucciones que Claude carga automáticamente
@@ -173,7 +187,98 @@ Para añadir otro dominio o subdominio, agrégalo al array `routes` con
 
 ---
 
-## 7. Directrices de diseño
+## 7. Autenticación
+
+La sesión es **opcional**: buscar en Atarax no requiere cuenta. Solo hace falta
+para guardar favoritos, reseñar o gestionar la ficha de un negocio.
+
+Dos vías, ambas sin contraseñas:
+
+| Vía | Ruta de entrada | Estado |
+|---|---|---|
+| Enlace mágico por correo | `POST /api/auth/enlace` | Requiere habilitar Email Sending |
+| Google OAuth | `GET /api/auth/google` | Requiere `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` |
+
+Ambas convergen en el mismo usuario: **la identidad es el correo**, así que
+quien entre una vez por enlace y otra por Google acaba en la misma cuenta.
+
+### 7.1 Rutas
+
+| Ruta | Método | Qué hace |
+|---|---|---|
+| `/entrar` | GET | Pantalla de acceso |
+| `/api/auth/enlace` | POST | Envía el enlace mágico. Limitado por correo e IP |
+| `/entrar/verificar?token=` | GET | Canjea el enlace y abre sesión |
+| `/api/auth/google` | GET | Redirige a Google con `state` anti-CSRF |
+| `/api/auth/google/callback` | GET | Valida `state`, canjea el código, abre sesión |
+| `/api/auth/yo` | GET | Estado de sesión, para pintar la cabecera |
+| `/api/auth/salir` | POST | Revoca la sesión en servidor |
+
+### 7.2 Decisiones de seguridad
+
+Cada una responde a un ataque concreto:
+
+- **Tokens hasheados en la base.** Ni los enlaces ni las sesiones se guardan en
+  claro: quien lea la base de datos no obtiene nada con lo que iniciar sesión.
+- **Enlace de un solo uso y 15 minutos.** El canje marca el token en la misma
+  condición SQL, así que dos peticiones simultáneas no pueden usarlo dos veces.
+- **Sesiones en D1, no JWT.** Un JWT firmado no se puede revocar antes de que
+  caduque; una fila sí. Cerrar sesión es un `DELETE`.
+- **Cookie `__Host-`** con `HttpOnly`, `Secure`, `SameSite=Lax`. El prefijo lo
+  impone el navegador: ningún subdominio comprometido puede sobrescribirla.
+- **Origen canónico, no `url.origin`.** El enlace mágico se construye desde
+  `ORIGENES_PERMITIDOS`, nunca desde la cabecera `Host`. Sin esto, un `Host`
+  falsificado haría que el correo llevase a la víctima al dominio del atacante
+  con un token válido — **inyección de Host**.
+- **`state` obligatorio en OAuth.** Se guarda en cookie efímera y se compara al
+  volver; sin coincidencia no se sigue.
+- **Correo de Google sin verificar → rechazado.** No acredita identidad.
+- **Respuesta idéntica exista o no la cuenta.** Evita enumerar usuarios.
+- **Límite de intentos** por correo (5) y por IP (20) en ventanas de 15 minutos.
+- **Aleatoriedad con Web Crypto.** `Math.random()` es predecible y no vale aquí.
+
+### 7.3 Lo que falta configurar
+
+**Correo** — habilitar el envío en el dominio, una sola vez:
+
+```bash
+npx wrangler email sending enable logidma.com
+```
+
+El token de despliegue necesita entonces `Email Sending: Edit`.
+
+**Google** — crear el cliente OAuth en Google Cloud Console con este URI de
+redirección autorizado:
+
+```
+https://atarax.logidma.com/api/auth/google/callback
+```
+
+Y guardar las credenciales como secretos (nunca en `wrangler.jsonc`):
+
+```bash
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+```
+
+Mientras falten, cada vía degrada sin romper: Google avisa de que no está
+disponible y el enlace mágico responde `correo_no_configurado`.
+
+### 7.4 Probar en local
+
+`wrangler dev` simula el binding de correo y **escribe el mensaje a disco** en
+vez de enviarlo. El enlace está ahí:
+
+```bash
+cat .wrangler/tmp/email/*/email-text/*.txt
+```
+
+Copia `.dev.vars.example` a `.dev.vars` para apuntar los enlaces a tu servidor
+local y probar las credenciales de Google sin tocar producción.
+
+---
+
+## 8. Directrices de diseño
 
 Estas reglas son vinculantes: toda vista nueva de Atarax debe cumplirlas.
 
@@ -264,7 +369,7 @@ Innegociable en cualquier vista:
 
 ---
 
-## 8. Skills incluidas
+## 9. Skills incluidas
 
 Viven en `.claude/skills/` y se cargan solas al trabajar en este repo.
 Como están versionadas, viajan con el repositorio: cualquier sesión o
@@ -287,7 +392,7 @@ npm install gsap    # 3.15.0
 
 ---
 
-## 9. Convenciones
+## 10. Convenciones
 
 - **Nunca** commitear secretos. Usar `wrangler secret put` o `.dev.vars`.
 - Toda consulta a D1 con `.bind()`; jamás construir SQL por concatenación.

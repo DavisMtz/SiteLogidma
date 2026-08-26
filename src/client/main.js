@@ -61,6 +61,56 @@ function intro() {
   return tl;
 }
 
+
+/**
+ * La cabecera refleja la sesión. Se consulta después de pintar: el inicio se
+ * ve igual con sesión o sin ella, así que esto nunca bloquea el render.
+ */
+async function pintarSesion() {
+  const enlace = q("[data-auth]");
+  if (!enlace) return;
+
+  let datos;
+  try {
+    const resp = await fetch("/api/auth/yo", { headers: { accept: "application/json" } });
+    datos = await resp.json();
+  } catch {
+    return; // sin red: se queda "Iniciar sesión", que es el estado seguro
+  }
+  if (!datos?.sesion) return;
+
+  const { nombre, email, avatar_url } = datos.usuario;
+  const bloque = document.createElement("div");
+  bloque.className = "nav__sesion";
+
+  if (avatar_url) {
+    const img = document.createElement("img");
+    img.className = "nav__avatar";
+    img.src = avatar_url;
+    img.alt = "";
+    bloque.append(img);
+  }
+
+  const span = document.createElement("span");
+  span.className = "nav__correo";
+  // textContent, no innerHTML: el nombre viene de un tercero.
+  span.textContent = nombre || email;
+  bloque.append(span);
+
+  const salir = document.createElement("button");
+  salir.className = "btn btn--ghost";
+  salir.type = "button";
+  salir.textContent = "Salir";
+  salir.addEventListener("click", async () => {
+    salir.disabled = true;
+    await fetch("/api/auth/salir", { method: "POST" });
+    location.reload();
+  });
+  bloque.append(salir);
+
+  enlace.replaceWith(bloque);
+}
+
 function ready(fn) {
   if (document.readyState !== "loading") fn();
   else document.addEventListener("DOMContentLoaded", fn, { once: true });
@@ -83,6 +133,8 @@ ready(() => {
 
     return () => { clearTimeout(guard); cleanup?.(); };
   });
+
+  void pintarSesion();
 
   // El envío vacío no debe recargar a una búsqueda sin término.
   q("[data-search]")?.addEventListener("submit", (e) => {
