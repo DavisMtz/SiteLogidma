@@ -689,3 +689,25 @@ textarea.acceso__input { resize: vertical; font-family: var(--font-ui); }
   background: var(--cantera); color: #2A1418; border: 1px solid var(--cantera);
 }
 .btn--solido:hover { background: #EFB4BA; border-color: #EFB4BA; color: #2A1418; }
+
+/* Aviso de contenido tras el inicio de sesión ---------------------- */
+.candado {
+  display: flex; align-items: center; gap: .45rem;
+  margin: .5rem 0 0; padding: .55rem .7rem;
+  background: rgba(156, 143, 199, .10);
+  border: 1px dashed rgba(156, 143, 199, .35);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: var(--step--1);
+  line-height: 1.4;
+}
+.candado svg { width: .95rem; height: .95rem; flex: none; color: var(--jacaranda); }
+.candado a { color: var(--jacaranda); }
+
+.lugar__web {
+  align-self: flex-start;
+  color: var(--cantera);
+  font-size: var(--step--1);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}

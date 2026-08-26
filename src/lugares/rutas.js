@@ -11,28 +11,55 @@ import { COOKIE_SESION, leerCookie } from "../auth/cookies.js";
 const TIPOS = new Set(["negocio", "servicio", "evento"]);
 const LIMITE = 200;
 
-// Campos que se devuelven al cliente. Explícito para no filtrar columnas nuevas
-// por accidente al evolucionar el esquema.
-const CAMPOS = `id, tipo, nombre, descripcion, categoria, direccion, colonia,
+/**
+ * Dos proyecciones según haya sesión o no.
+ *
+ * Sin sesión se ve lo suficiente para juzgar si el lugar sirve —qué es, dónde
+ * queda por zona, a qué hora abre— pero no cómo contactarlo. Ese es el
+ * incentivo para registrarse.
+ *
+ * El recorte se hace en el SQL, no en el cliente: enviar el teléfono y
+ * esconderlo con CSS lo dejaría a la vista de cualquiera que abra las
+ * herramientas del navegador.
+ *
+ * La ubicación pública se redondea a tres decimales (~110 m): basta para
+ * situar el lugar en su colonia sin señalar el portal exacto.
+ */
+const CAMPOS_PUBLICOS = `id, tipo, nombre, descripcion, categoria, colonia,
+                ROUND(lat, 3) AS lat, ROUND(lng, 3) AS lng,
+                horario, inicia_en, termina_en, creado_en,
+                CASE WHEN telefono IS NOT NULL OR whatsapp IS NOT NULL
+                       OR direccion IS NOT NULL OR sitio_web IS NOT NULL
+                     THEN 1 ELSE 0 END AS tiene_contacto`;
+
+const CAMPOS_COMPLETOS = `id, tipo, nombre, descripcion, categoria, direccion, colonia,
                 lat, lng, telefono, whatsapp, sitio_web, horario,
-                inicia_en, termina_en, creado_en`;
+                inicia_en, termina_en, creado_en, 1 AS tiene_contacto`;
+
+const campos = (haySesion) => (haySesion ? CAMPOS_COMPLETOS : CAMPOS_PUBLICOS);
 
 export async function rutasLugares(request, env, ctx, url) {
   const ruta = url.pathname;
 
   if (ruta === "/api/lugares") {
-    if (request.method === "GET")  return await listar(env, url);
+    if (request.method === "GET")  return await listar(request, env, url);
     if (request.method === "POST") return await crear(request, env);
     return Response.json({ error: "método no permitido" }, { status: 405 });
   }
 
   const detalle = ruta.match(/^\/api\/lugares\/([A-Za-z0-9-]{36})$/);
-  if (detalle) return await verUno(env, detalle[1]);
+  if (detalle) return await verUno(request, env, detalle[1]);
 
   return null;
 }
 
-async function listar(env, url) {
+/** ¿Hay sesión? Determina qué campos se devuelven. */
+async function haySesion(request, env) {
+  return Boolean(await usuarioDeSesion(env.morelia, leerCookie(request, COOKIE_SESION)));
+}
+
+async function listar(request, env, url) {
+  const sesion = await haySesion(request, env);
   const p = url.searchParams;
   const condiciones = ["estado = 'publicado'"];
   const valores = [];
@@ -70,21 +97,26 @@ async function listar(env, url) {
   // `soloConMapa` evita que la vista de mapa cuente lugares que no puede pintar.
   if (p.get("con_ubicacion") === "1") condiciones.push("lat IS NOT NULL AND lng IS NOT NULL");
 
-  const sql = `SELECT ${CAMPOS} FROM lugares
+  const sql = `SELECT ${campos(sesion)} FROM lugares
                WHERE ${condiciones.join(" AND ")}
                ORDER BY creado_en DESC
                LIMIT ${LIMITE}`;
 
   const { results } = await env.morelia.prepare(sql).bind(...valores).all();
-  return Response.json({ lugares: results ?? [], total: results?.length ?? 0 });
+  return Response.json({
+    lugares: results ?? [],
+    total: results?.length ?? 0,
+    sesion,                    // el cliente lo usa para pintar el candado
+  });
 }
 
-async function verUno(env, id) {
+async function verUno(request, env, id) {
+  const sesion = await haySesion(request, env);
   const fila = await env.morelia.prepare(
-    `SELECT ${CAMPOS} FROM lugares WHERE id = ? AND estado = 'publicado'`,
+    `SELECT ${campos(sesion)} FROM lugares WHERE id = ? AND estado = 'publicado'`,
   ).bind(id).first();
   return fila
-    ? Response.json({ lugar: fila })
+    ? Response.json({ lugar: fila, sesion })
     : Response.json({ error: "no encontrado" }, { status: 404 });
 }
 
@@ -120,7 +152,7 @@ async function crear(request, env) {
     usuario.id,
   ).run();
 
-  const lugar = await env.morelia.prepare(`SELECT ${CAMPOS} FROM lugares WHERE id = ?`)
+  const lugar = await env.morelia.prepare(`SELECT ${CAMPOS_COMPLETOS} FROM lugares WHERE id = ?`)
     .bind(id).first();
   return Response.json({ lugar }, { status: 201 });
 }

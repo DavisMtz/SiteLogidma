@@ -10,10 +10,23 @@ const ZOOM = 14;
 
 const COLOR = { negocio: "#E3A0A8", servicio: "#9C8FC7", evento: "#D9B36C" };
 
+const FECHA = new Intl.DateTimeFormat("es-MX", {
+  weekday: "short", day: "numeric", month: "short",
+  hour: "numeric", minute: "2-digit",
+});
+
+/** Las fechas llegan en ISO; en pantalla se leen en español. */
+function fecha(iso) {
+  if (!iso) return null;
+  const d = new Date(iso.includes("T") ? iso : iso.replace(" ", "T"));
+  return Number.isNaN(d.getTime()) ? iso : FECHA.format(d);
+}
+
 const estado = {
   tipo: "",
   q: "",
   modo: "lista",
+  sesion: false,
   lugares: [],
   mapa: null,
   capaMarcadores: null,
@@ -31,6 +44,7 @@ async function cargar() {
     const resp = await fetch(`/api/lugares?${p}`);
     const datos = await resp.json();
     estado.lugares = datos.lugares ?? [];
+    estado.sesion = datos.sesion === true;
   } catch {
     estado.lugares = [];
     q("[data-estado]").textContent = "No pudimos cargar los lugares.";
@@ -45,12 +59,13 @@ function pintar() {
   const n = estado.lugares.length;
   const conUbicacion = estado.lugares.filter((l) => l.lat != null && l.lng != null).length;
 
-  q("[data-estado]").textContent = n === 0
-    ? ""
-    : `${n} ${n === 1 ? "lugar" : "lugares"}` +
-      (estado.modo === "mapa" && conUbicacion < n
-        ? ` · ${n - conUbicacion} sin ubicación, no aparecen en el mapa`
-        : "");
+  const partes = [];
+  if (n) partes.push(`${n} ${n === 1 ? "lugar" : "lugares"}`);
+  if (n && estado.modo === "mapa" && conUbicacion < n) {
+    partes.push(`${n - conUbicacion} sin ubicación, no aparecen en el mapa`);
+  }
+  if (n && !estado.sesion) partes.push("ubicación aproximada");
+  q("[data-estado]").textContent = partes.join(" · ");
 
   pintarLista();
   if (estado.modo === "mapa") pintarMapa();
@@ -120,9 +135,24 @@ function tarjeta(l) {
   };
   dato("Dónde", [l.direccion, l.colonia].filter(Boolean).join(", "));
   dato("Horario", l.horario);
-  dato("Cuándo", l.inicia_en);
+  dato("Cuándo", fecha(l.inicia_en));
   dato("Teléfono", l.telefono);
+  dato("WhatsApp", l.whatsapp);
   if (meta.children.length) li.append(meta);
+
+  // Sin sesión, el contacto no viaja al navegador: aquí solo se anuncia que
+  // existe y se ofrece el camino para verlo.
+  if (!estado.sesion && l.tiene_contacto) li.append(candado());
+
+  if (estado.sesion && l.sitio_web) {
+    const a = document.createElement("a");
+    a.className = "lugar__web";
+    a.href = l.sitio_web;
+    a.rel = "noopener noreferrer nofollow";
+    a.target = "_blank";
+    a.textContent = "Sitio web";
+    li.append(a);
+  }
 
   if (l.lat != null && l.lng != null) {
     const ver = document.createElement("button");
@@ -138,6 +168,30 @@ function tarjeta(l) {
   }
 
   return li;
+}
+
+function candado() {
+  const caja = document.createElement("p");
+  caja.className = "candado";
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML =
+    '<rect x="3" y="7" width="10" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+    '<path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/>';
+  caja.append(svg);
+
+  const texto = document.createElement("span");
+  texto.textContent = "Contacto y dirección exacta · ";
+  caja.append(texto);
+
+  const a = document.createElement("a");
+  a.href = "/entrar";
+  a.textContent = "inicia sesión";
+  caja.append(a);
+
+  return caja;
 }
 
 /* ----------------------------------------------------------------- mapa -- */
