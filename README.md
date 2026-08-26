@@ -20,6 +20,7 @@ SiteLogidma/
 │   ├── entrar.html            ← pantalla de acceso
 │   ├── styles.css             ← tokens y sistema de diseño
 │   ├── favicon.svg
+│   ├── _headers               ← cabeceras de seguridad de los assets
 │   ├── main.js, entrar.js     ← BUILD: los genera esbuild, no se versionan
 │   └── fonts/                 ← Fraunces e Inter auto-hospedadas (SIL OFL)
 │
@@ -59,7 +60,109 @@ navegador → Worker (src/index.js)
 
 ---
 
-## 2. Infraestructura en Cloudflare
+## 2. Mapa de plataformas
+
+Todo el proyecto corre en **plan gratuito**. Esta sección registra qué hace cada
+plataforma, qué se configuró en ella y qué credenciales usa.
+
+### 2.1 Resumen
+
+| Plataforma | Función en Atarax | Plan | Credencial |
+|---|---|---|---|
+| **Cloudflare Workers** | Ejecuta el sitio y la API | Free | API token de despliegue |
+| **Cloudflare Static Assets** | Sirve HTML, CSS, JS y fuentes | Free (incluido) | — |
+| **Cloudflare D1** | Base de datos `morelia` | Free | Binding `env.morelia` |
+| **Cloudflare DNS** | Zona `logidma.com` | Free | API token |
+| **Google Cloud OAuth** | Inicio de sesión con Google | Gratis | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (secretos) |
+| **Brevo** | Envío del enlace mágico | Free (300/día) | `BREVO_API_KEY` (secreto) |
+| **GitHub** | Repositorio y PRs | Free | — |
+
+Fuera del proyecto pero **en el mismo dominio**, y por tanto relevante al tocar DNS:
+
+| Plataforma | Qué usa de `logidma.com` |
+|---|---|
+| Google Workspace | MX del dominio, DKIM en `google._domainkey` |
+| Firebase | Incluido en el SPF (`_spf.firebasemail.com`) |
+
+### 2.2 Cloudflare — qué está configurado
+
+| Elemento | Valor |
+|---|---|
+| Account ID | `1ef6a06b0e674b43f95c90a63863bc69` |
+| Worker | `atarax` |
+| Subdominio de cuenta | `logidma.workers.dev` |
+| Dominio propio | `atarax.logidma.com` (declarado en `wrangler.jsonc`) |
+| Zona | `logidma.com` |
+| D1 | `morelia` · región ENAM · 5 tablas de autenticación |
+| Observabilidad | Activada |
+| Variables (`vars`) | `DOMINIO_CORREO`, `ORIGENES_PERMITIDOS` |
+| Secretos | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BREVO_API_KEY` |
+
+### 2.3 Google Cloud — qué está configurado
+
+| Elemento | Valor |
+|---|---|
+| Tipo | Cliente OAuth 2.0 (aplicación web) |
+| URI de redirección | `https://atarax.logidma.com/api/auth/google/callback` |
+| Ámbitos | `openid email profile` |
+| Coste | Gratuito |
+
+### 2.4 Brevo — qué falta configurar
+
+| Elemento | Estado |
+|---|---|
+| Cuenta | Pendiente |
+| Dominio `logidma.com` autenticado | Pendiente — añade registros DNS, revisar que no choquen |
+| Clave API (`xkeysib-…`) | Pendiente |
+
+**Cuidado con las credenciales de Brevo:** hay dos y se parecen. La clave **SMTP**
+(`xsmtpsib-…`) **no sirve**: el Worker habla con la API REST y necesita una clave
+**API** (`xkeysib-…`), que está en *SMTP & API → pestaña API Keys*.
+
+### 2.5 Límites del plan gratuito
+
+Verificados en la documentación de Cloudflare:
+
+| Recurso | Límite gratuito | Consumo de Atarax |
+|---|---|---|
+| Peticiones al Worker | 100.000/día | Solo API y autenticación |
+| **Peticiones a assets** | **Gratis e ilimitadas** | Todo el front |
+| Tiempo de CPU | 10 ms por petición | Muy por debajo |
+| Subpeticiones | 50 por invocación | 1–2 (Brevo o Google) |
+| D1: tamaño | 500 MB por base · 5 GB por cuenta | Vacío aún |
+| D1: consultas | 50 por invocación | 3–5 en autenticación |
+| D1: recuperación | 7 días de Time Travel | — |
+| Brevo | 300 correos/día | Enlaces mágicos |
+
+**Por qué los assets son gratis:** el `wrangler.jsonc` **no** usa
+`run_worker_first`. Con esa opción cada CSS y cada fuente invocaba al Worker y
+gastaba de los 100.000 diarios; peor aún, al agotarlos Cloudflare devuelve **429**
+en vez de servir el archivo, y el sitio entero cae. Sin ella, los assets se sirven
+gratis e ilimitados y la cuota se reserva para lo que de verdad ejecuta lógica.
+Las cabeceras de seguridad de los assets viven en `public/_headers`.
+
+### 2.6 Qué más da el plan gratuito, sin usar todavía
+
+Disponible a coste cero si hace falta:
+
+| Servicio | Qué aporta a Atarax | Límite gratuito |
+|---|---|---|
+| **Turnstile** | CAPTCHA sin fricción en el registro | Gratis |
+| **R2** | Fotos de negocios y eventos | 10 GB, egreso gratis |
+| **KV** | Caché de búsquedas frecuentes | 100.000 lecturas/día · 1.000 escrituras/día |
+| **Workers AI** | Búsqueda semántica, descripciones | 10.000 Neurons/día |
+| **Email Routing** | Recibir correo (`hola@logidma.com`) | Ilimitado |
+| **Cache API / Rules** | Acelerar respuestas repetidas | Incluido |
+| **Web Analytics** | Visitas sin cookies de terceros | Gratis |
+
+**No disponibles en plan gratuito** — exigen Workers Paid ($5/mes):
+
+- **Cloudflare Email Sending** — por eso el correo va por Brevo
+- **Durable Objects** — relevante si algún día hace falta estado coordinado
+
+---
+
+## 3. Infraestructura en Cloudflare
 
 | Recurso | Valor |
 |---|---|
@@ -85,7 +188,7 @@ navegador → Worker (src/index.js)
 
 ---
 
-## 3. Orden de trabajo
+## 4. Orden de trabajo
 
 ### Puesta en marcha
 
@@ -127,7 +230,7 @@ npm run tail
 
 ---
 
-## 4. Permisos de API token
+## 5. Permisos de API token
 
 Token mínimo para desplegar este proyecto:
 
@@ -144,7 +247,7 @@ Alternativa más cerrada: omitir `Account Settings: Read` y exportar
 
 ---
 
-## 5. Base de datos D1 (`morelia`)
+## 6. Base de datos D1 (`morelia`)
 
 Actualmente **sin tablas**. Cuando exista esquema:
 
@@ -163,7 +266,7 @@ const row = await env.morelia.prepare("SELECT * FROM tracks WHERE id = ?")
 
 ---
 
-## 6. Dominio
+## 7. Dominio
 
 El sitio se sirve en **<https://atarax.logidma.com>**, un dominio propio dentro de
 la zona `logidma.com`. El subdominio `atarax.logidma.workers.dev` sigue activo como
@@ -188,7 +291,7 @@ Para añadir otro dominio o subdominio, agrégalo al array `routes` con
 
 ---
 
-## 7. Autenticación
+## 8. Autenticación
 
 La sesión es **opcional**: buscar en Atarax no requiere cuenta. Solo hace falta
 para guardar favoritos, reseñar o gestionar la ficha de un negocio.
@@ -203,7 +306,7 @@ Dos vías, ambas sin contraseñas:
 Ambas convergen en el mismo usuario: **la identidad es el correo**, así que
 quien entre una vez por enlace y otra por Google acaba en la misma cuenta.
 
-### 7.1 Rutas
+### 8.1 Rutas
 
 | Ruta | Método | Qué hace |
 |---|---|---|
@@ -215,7 +318,7 @@ quien entre una vez por enlace y otra por Google acaba en la misma cuenta.
 | `/api/auth/yo` | GET | Estado de sesión, para pintar la cabecera |
 | `/api/auth/salir` | POST | Revoca la sesión en servidor |
 
-### 7.2 Decisiones de seguridad
+### 8.2 Decisiones de seguridad
 
 Cada una responde a un ataque concreto:
 
@@ -238,7 +341,7 @@ Cada una responde a un ataque concreto:
 - **Límite de intentos** por correo (5) y por IP (20) en ventanas de 15 minutos.
 - **Aleatoriedad con Web Crypto.** `Math.random()` es predecible y no vale aquí.
 
-### 7.3 Lo que falta configurar
+### 8.3 Lo que falta configurar
 
 **Correo — se envía por Brevo, no por Cloudflare.**
 
@@ -290,7 +393,7 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 Mientras falten, cada vía degrada sin romper: Google avisa de que no está
 disponible y el enlace mágico responde `correo_no_configurado`.
 
-### 7.4 Probar en local
+### 8.4 Probar en local
 
 `wrangler dev` simula el binding de correo y **escribe el mensaje a disco** en
 vez de enviarlo. El enlace está ahí:
@@ -304,11 +407,11 @@ local y probar las credenciales de Google sin tocar producción.
 
 ---
 
-## 8. Directrices de diseño
+## 9. Directrices de diseño
 
 Estas reglas son vinculantes: toda vista nueva de Atarax debe cumplirlas.
 
-### 6.1 Principio rector
+### 9.1 Principio rector
 
 Atarax es un directorio **local**. El diseño no es decoración genérica: está anclado
 en Morelia. Dos referencias sostienen toda la identidad visual:
@@ -319,7 +422,7 @@ en Morelia. Dos referencias sostienen toda la identidad visual:
 
 Antes de añadir un elemento decorativo, pregúntate si nace de ahí. Si no, sobra.
 
-### 6.2 Color
+### 9.2 Color
 
 Todo color sale de un token en `:root`. **Nunca escribas un hexadecimal suelto en una regla.**
 
@@ -340,7 +443,7 @@ Todo color sale de un token en `:root`. **Nunca escribas un hexadecimal suelto e
 Regla de proporción: **el acento nunca supera ~10% de la superficie visible**. La
 elegancia aquí viene del contraste contenido, no de la saturación.
 
-### 6.3 Tipografía
+### 9.3 Tipografía
 
 Dos familias, auto-hospedadas en `/public/fonts` (SIL OFL, subconjunto latin):
 
@@ -358,7 +461,7 @@ Dos familias, auto-hospedadas en `/public/fonts` (SIL OFL, subconjunto latin):
 **No añadas una tercera familia.** Si algo necesita distinguirse, usa peso, tamaño
 o color, en ese orden.
 
-### 6.4 Movimiento
+### 9.4 Movimiento
 
 Rige la skill `gsap-animation`. Resumen operativo:
 
@@ -370,20 +473,20 @@ Rige la skill `gsap-animation`. Resumen operativo:
 - Solo se animan `transform` y `opacity`.
 - `prefers-reduced-motion` salta al estado final. No es opcional.
 
-### 6.5 Forma y espacio
+### 9.5 Forma y espacio
 
 - Radio: `999px` en píldoras (botones, buscador), `--radius` (16px) en tarjetas.
 - El espaciado nace de `--gutter` y de `clamp()` ligado al viewport, no de valores fijos.
 - Las tarjetas se elevan 3px en hover. Ningún movimiento de hover pasa de eso.
 
-### 6.6 SVG
+### 9.6 SVG
 
 - Trazo, no relleno: `fill="none"` con `stroke="currentColor"`, grosor `2` a 48px.
 - El color se hereda con `currentColor`, para que el token mande.
 - Todo SVG decorativo lleva `aria-hidden="true"` y `focusable="false"`.
 - Los iconos comparten métrica: mismo viewBox, mismo grosor, misma terminación.
 
-### 6.7 Accesibilidad
+### 9.7 Accesibilidad
 
 Innegociable en cualquier vista:
 
@@ -395,7 +498,7 @@ Innegociable en cualquier vista:
 
 ---
 
-## 9. Skills incluidas
+## 10. Skills incluidas
 
 Viven en `.claude/skills/` y se cargan solas al trabajar en este repo.
 Como están versionadas, viajan con el repositorio: cualquier sesión o
@@ -418,7 +521,7 @@ npm install gsap    # 3.15.0
 
 ---
 
-## 10. Convenciones
+## 11. Convenciones
 
 - **Nunca** commitear secretos. Usar `wrangler secret put` o `.dev.vars`.
 - Toda consulta a D1 con `.bind()`; jamás construir SQL por concatenación.
