@@ -21,8 +21,10 @@
     "run_worker_first": true
   },
 
-  // Envío del enlace mágico. Requiere habilitar Email Sending en el dominio:
-  //   npx wrangler email sending enable logidma.com
+  // Binding de correo de Cloudflare. Requiere plan Workers Paid, así que en
+  // producción no se usa: el envío va por Brevo (plan gratuito). Se mantiene
+  // porque `wrangler dev` lo simula y escribe el correo a disco, lo que hace
+  // probable el enlace mágico en local sin credenciales.
   "send_email": [
     { "name": "EMAIL" }
   ],

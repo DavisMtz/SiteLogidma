@@ -31,7 +31,8 @@ SiteLogidma/
 │   ├── auth/                  ← autenticación
 │   │   ├── rutas.js           ← endpoints
 │   │   ├── sesiones.js        ← sesiones y usuarios en D1
-│   │   ├── enlace-magico.js   ← tokens de un solo uso y correo
+│   │   ├── enlace-magico.js   ← tokens de un solo uso y plantilla
+│   │   ├── correo.js          ← cascada de proveedores de envío
 │   │   ├── google.js          ← OAuth 2.0
 │   │   ├── origen.js          ← origen canónico (anti inyección de Host)
 │   │   ├── cookies.js         ← cookie __Host- de sesión
@@ -196,7 +197,7 @@ Dos vías, ambas sin contraseñas:
 
 | Vía | Ruta de entrada | Estado |
 |---|---|---|
-| Enlace mágico por correo | `POST /api/auth/enlace` | Requiere habilitar Email Sending |
+| Enlace mágico por correo | `POST /api/auth/enlace` | Requiere `BREVO_API_KEY` |
 | Google OAuth | `GET /api/auth/google` | Requiere `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` |
 
 Ambas convergen en el mismo usuario: **la identidad es el correo**, así que
@@ -239,13 +240,38 @@ Cada una responde a un ataque concreto:
 
 ### 7.3 Lo que falta configurar
 
-**Correo** — habilitar el envío en el dominio, una sola vez:
+**Correo — se envía por Brevo, no por Cloudflare.**
+
+Cloudflare Email Sending **no está disponible en el plan Workers Free**: exige
+Workers Paid ($5/mes). Como el proyecto se mantiene a coste cero, el envío va
+por Brevo, cuyo plan gratuito da 300 correos/día — de sobra para un directorio
+de barrio.
+
+Pasos, una sola vez:
+
+1. Crear cuenta en Brevo (plan gratuito).
+2. Autenticar el dominio `logidma.com` en Brevo y añadir los registros DNS que
+   indique. **Ojo**: `logidma.com` ya envía correo por Google Workspace y
+   Firebase; los registros de Brevo usan sus propios selectores y no deberían
+   chocar, pero revisa antes de aplicar.
+3. Crear una clave API y guardarla como secreto:
 
 ```bash
-npx wrangler email sending enable logidma.com
+npx wrangler secret put BREVO_API_KEY
 ```
 
-El token de despliegue necesita entonces `Email Sending: Edit`.
+### Cascada de proveedores
+
+`src/auth/correo.js` elige proveedor por disponibilidad:
+
+| Orden | Proveedor | Cuándo actúa |
+|---|---|---|
+| 1 | Brevo | Si existe `BREVO_API_KEY` — el camino de producción |
+| 2 | Binding `EMAIL` de Cloudflare | Solo con Workers Paid; en `wrangler dev` es una simulación que escribe el correo a disco |
+| 3 | Log | Último recurso en desarrollo: deja el enlace en consola |
+
+Solo devuelve éxito si un proveedor real aceptó el mensaje. Si ninguno lo
+acepta, la API responde `correo_no_configurado` en vez de fingir que envió.
 
 **Google** — crear el cliente OAuth en Google Cloud Console con este URI de
 redirección autorizado:
