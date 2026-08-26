@@ -7,6 +7,9 @@
 import { nuevoId, ahora } from "../auth/crypto.js";
 import { usuarioDeSesion } from "../auth/sesiones.js";
 import { COOKIE_SESION, leerCookie } from "../auth/cookies.js";
+import { generarIcs } from "./calendario.js";
+import { renderFicha } from "./ficha.js";
+import { origenCanonico } from "../auth/origen.js";
 
 const TIPOS = new Set(["negocio", "servicio", "evento"]);
 const LIMITE = 200;
@@ -49,6 +52,19 @@ export async function rutasLugares(request, env, ctx, url) {
 
   const detalle = ruta.match(/^\/api\/lugares\/([A-Za-z0-9-]{36})$/);
   if (detalle) return await verUno(request, env, detalle[1]);
+
+  const cat = ruta.match(/^\/api\/lugares\/([A-Za-z0-9-]{36})\/catalogo$/);
+  if (cat) {
+    if (request.method === "GET")  return Response.json({ secciones: await catalogoDe(env, cat[1]) });
+    if (request.method === "POST") return await guardarCatalogo(request, env, cat[1]);
+    return Response.json({ error: "método no permitido" }, { status: 405 });
+  }
+
+  const ics = ruta.match(/^\/api\/lugares\/([A-Za-z0-9-]{36})\/ics$/);
+  if (ics) return await descargarIcs(env, ics[1], origenCanonico(env, url));
+
+  const ficha = ruta.match(/^\/lugar\/([A-Za-z0-9-]{36})$/);
+  if (ficha) return await paginaFicha(request, env, ficha[1], origenCanonico(env, url));
 
   return null;
 }
@@ -179,3 +195,133 @@ function validar(c) {
 
 const texto  = (v, max) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const numero = (v) => (v === undefined || v === null || v === "" ? null : Number(v));
+
+
+/* ------------------------------------------------------- catálogo ------- */
+
+/** Secciones con sus ítems, en dos consultas en vez de N+1. */
+async function catalogoDe(env, lugarId) {
+  const { results: secciones } = await env.morelia.prepare(
+    "SELECT id, nombre, descripcion FROM catalogo_secciones WHERE lugar_id = ? ORDER BY orden, creado_en",
+  ).bind(lugarId).all();
+
+  if (!secciones?.length) return [];
+
+  const marcadores = secciones.map(() => "?").join(",");
+  const { results: items } = await env.morelia.prepare(
+    `SELECT id, seccion_id, nombre, descripcion, precio_centavos, moneda, desde, unidad, disponible
+       FROM catalogo_items WHERE seccion_id IN (${marcadores}) ORDER BY orden, rowid`,
+  ).bind(...secciones.map((s) => s.id)).all();
+
+  const porSeccion = new Map(secciones.map((s) => [s.id, []]));
+  for (const i of items ?? []) porSeccion.get(i.seccion_id)?.push(i);
+
+  return secciones.map((s) => ({ ...s, items: porSeccion.get(s.id) ?? [] }));
+}
+
+/* ---------------------------------------------------------- ficha ------- */
+
+async function paginaFicha(request, env, id, origen) {
+  const sesion = await haySesion(request, env);
+  const lugar = await env.morelia.prepare(
+    `SELECT ${campos(sesion)}, todo_el_dia, recurrencia FROM lugares
+      WHERE id = ? AND estado = 'publicado'`,
+  ).bind(id).first();
+
+  if (!lugar) {
+    return new Response("Lugar no encontrado", {
+      status: 404, headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
+
+  const secciones = await catalogoDe(env, id);
+  return new Response(renderFicha(lugar, secciones, sesion, origen), {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
+/* ------------------------------------------------------------ ics ------- */
+
+async function descargarIcs(env, id, origen) {
+  // El .ics necesita la dirección exacta para ser útil en el calendario, así
+  // que se lee completo; es un evento público y su sitio es parte del evento.
+  const l = await env.morelia.prepare(
+    `SELECT id, tipo, nombre, descripcion, direccion, colonia, lat, lng,
+            inicia_en, termina_en, todo_el_dia, recurrencia
+       FROM lugares WHERE id = ? AND estado = 'publicado' AND tipo = 'evento'`,
+  ).bind(id).first();
+
+  if (!l?.inicia_en) return Response.json({ error: "no es un evento con fecha" }, { status: 404 });
+
+  const nombre = l.nombre.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  return new Response(generarIcs(l, origen), {
+    headers: {
+      "content-type": "text/calendar; charset=utf-8",
+      "content-disposition": `attachment; filename="${nombre || "evento"}.ics"`,
+    },
+  });
+}
+
+/**
+ * Reemplaza el catálogo completo de un lugar. Solo su autor.
+ *
+ * Se sustituye entero en vez de parchear ítem por ítem: el editor manda el
+ * estado final y así no hay que sincronizar altas, bajas y reordenamientos.
+ * El borrado en cascada limpia los ítems de las secciones eliminadas.
+ */
+async function guardarCatalogo(request, env, lugarId) {
+  const usuario = await usuarioDeSesion(env.morelia, leerCookie(request, COOKIE_SESION));
+  if (!usuario) return Response.json({ error: "necesitas iniciar sesión" }, { status: 401 });
+
+  const duenio = await env.morelia.prepare("SELECT creado_por FROM lugares WHERE id = ?")
+    .bind(lugarId).first();
+  if (!duenio) return Response.json({ error: "no encontrado" }, { status: 404 });
+  if (duenio.creado_por !== usuario.id) {
+    return Response.json({ error: "solo el autor puede editar este catálogo" }, { status: 403 });
+  }
+
+  const cuerpo = await request.json().catch(() => null);
+  const secciones = Array.isArray(cuerpo?.secciones) ? cuerpo.secciones : null;
+  if (!secciones) return Response.json({ error: "se esperaba una lista de secciones" }, { status: 400 });
+  if (secciones.length > 30) return Response.json({ error: "demasiadas secciones" }, { status: 400 });
+
+  const sentencias = [
+    env.morelia.prepare("DELETE FROM catalogo_secciones WHERE lugar_id = ?").bind(lugarId),
+  ];
+
+  secciones.forEach((sec, iSec) => {
+    if (typeof sec?.nombre !== "string" || !sec.nombre.trim()) return;
+    const secId = nuevoId();
+    sentencias.push(env.morelia.prepare(
+      "INSERT INTO catalogo_secciones (id, lugar_id, nombre, descripcion, orden) VALUES (?,?,?,?,?)",
+    ).bind(secId, lugarId, sec.nombre.trim().slice(0, 80),
+           texto(sec.descripcion, 300), iSec));
+
+    const items = Array.isArray(sec.items) ? sec.items.slice(0, 100) : [];
+    items.forEach((it, iIt) => {
+      if (typeof it?.nombre !== "string" || !it.nombre.trim()) return;
+      sentencias.push(env.morelia.prepare(
+        `INSERT INTO catalogo_items
+           (id, seccion_id, nombre, descripcion, precio_centavos, moneda, desde, unidad, orden, disponible)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      ).bind(
+        nuevoId(), secId, it.nombre.trim().slice(0, 120), texto(it.descripcion, 400),
+        centavos(it.precio), (it.moneda || "MXN").slice(0, 3),
+        it.desde ? 1 : 0, texto(it.unidad, 30), iIt, it.disponible === false ? 0 : 1,
+      ));
+    });
+  });
+
+  // batch() es atómico: o entra el catálogo entero, o no entra nada. Sin eso,
+  // un fallo a mitad dejaría el lugar sin catálogo tras haber borrado el viejo.
+  await env.morelia.batch(sentencias);
+
+  return Response.json({ secciones: await catalogoDe(env, lugarId) });
+}
+
+/** Los precios se guardan en centavos: los flotantes redondean mal el dinero. */
+function centavos(v) {
+  if (v === undefined || v === null || v === "") return null;
+  const n = Number(String(v).replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) ? Math.round(n * 100) : null;
+}

@@ -115,7 +115,11 @@ function tarjeta(l) {
 
   const h = document.createElement("h3");
   h.className = "lugar__nombre";
-  h.textContent = l.nombre;
+  const enlace = document.createElement("a");
+  enlace.className = "lugar__enlace";
+  enlace.href = `/lugar/${l.id}`;
+  enlace.textContent = l.nombre;
+  h.append(enlace);
   li.append(h);
 
   if (l.descripcion) {
