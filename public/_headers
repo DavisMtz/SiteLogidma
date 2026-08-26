@@ -1,0 +1,20 @@
+# Cabeceras para los assets estáticos.
+#
+# Existen para poder retirar `run_worker_first` del wrangler.jsonc: con esa
+# opción, cada CSS, fuente e imagen invocaba al Worker y consumía cuota del
+# plan gratuito (100.000 peticiones/día). Servidos como assets, son gratis
+# e ilimitados.
+#
+# Estas reglas NO aplican a lo que genera el Worker; de eso se encarga
+# withSecurityHeaders() en src/index.js.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
+
+# Las fuentes llevan hash implícito por contenido y no cambian: cache larga.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

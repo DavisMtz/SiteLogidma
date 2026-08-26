@@ -7,7 +7,7 @@ const q = (sel) => document.querySelector(sel);
 
 /** Estado final de la entrada, sin movimiento. */
 function settle() {
-  gsap.set("[data-eyebrow], [data-title], [data-ask], [data-search], [data-can-title], [data-can-lede], .card, [data-nav]", {
+  gsap.set("[data-eyebrow], [data-title], [data-ask], [data-search], [data-salto], [data-can-title], [data-can-lede], .card, [data-nav]", {
     clearProps: "all", autoAlpha: 1,
   });
   gsap.set(".arch", { strokeDashoffset: 0 });
@@ -49,6 +49,8 @@ function intro() {
     .to(arches, {
       strokeDashoffset: 0, duration: 1.9, ease: "power2.inOut", stagger: 0.055,
     }, "-=0.7")
+
+    .from("[data-salto]", { y: 14, autoAlpha: 0, duration: 0.7 }, "-=0.5")
 
     .from("[data-can-title]", { y: 20, autoAlpha: 0, duration: 0.8 }, "-=1.25")
     .from("[data-can-lede]",  { y: 20, autoAlpha: 0, duration: 0.8 }, "<0.08")

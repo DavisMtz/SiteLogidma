@@ -14,15 +14,22 @@
   "workers_dev": true,
 
   // El front vive en /public y lo sirve el almacén de assets de Cloudflare.
-  // run_worker_first: el Worker ve toda petición y añade cabeceras de seguridad.
+  //
+  // Sin `run_worker_first` a propósito: con esa opción cada CSS, fuente e
+  // imagen invocaba al Worker y gastaba cuota del plan gratuito (100.000
+  // peticiones/día), y al agotarla el sitio devuelve 429 en vez de servir el
+  // asset. Como assets son gratis e ilimitados. Las peticiones que no casan
+  // con ningún archivo (/api/*, /entrar/verificar) llegan al Worker igual.
+  // Las cabeceras de seguridad de los assets viven en public/_headers.
   "assets": {
     "directory": "./public",
-    "binding": "ASSETS",
-    "run_worker_first": true
+    "binding": "ASSETS"
   },
 
-  // Envío del enlace mágico. Requiere habilitar Email Sending en el dominio:
-  //   npx wrangler email sending enable logidma.com
+  // Binding de correo de Cloudflare. Requiere plan Workers Paid, así que en
+  // producción no se usa: el envío va por Brevo (plan gratuito). Se mantiene
+  // porque `wrangler dev` lo simula y escribe el correo a disco, lo que hace
+  // probable el enlace mágico en local sin credenciales.
   "send_email": [
     { "name": "EMAIL" }
   ],

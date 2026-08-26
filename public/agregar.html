@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agregar un lugar — Atarax</title>
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#12100F" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preload" href="/fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/inter-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/leaflet.css" />
+</head>
+<body>
+
+<header class="nav">
+  <a class="nav__brand" href="/" aria-label="Atarax, inicio">
+    <svg class="nav__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M4 26V16a12 12 0 0 1 24 0v10" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"/>
+      <path d="M11 26v-9a5 5 0 0 1 10 0v9" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" opacity=".55"/>
+    </svg>
+    <span>Atarax</span>
+  </a>
+  <nav class="nav__actions">
+    <a class="btn btn--ghost" href="/mis-lugares">Mis lugares</a>
+    <a class="btn btn--ghost" href="/explorar">Explorar</a>
+  </nav>
+</header>
+
+<main class="alta">
+  <div class="alta__caja">
+    <h1 class="alta__titulo" data-titulo>Agregar un lugar</h1>
+    <p class="alta__lede" data-lede>Comparte un negocio, un servicio o un evento de Villas del Pedregal o Morelia.</p>
+
+    <p class="aviso" role="alert" data-error hidden></p>
+    <p class="entrar__ok" role="status" data-ok hidden></p>
+
+    <div class="sesion-requerida" data-necesita-sesion hidden>
+      <p>Necesitas iniciar sesión para agregar un lugar.</p>
+      <a class="btn-google" href="/entrar">Iniciar sesión</a>
+    </div>
+
+    <form class="alta__form" data-form hidden novalidate>
+      <fieldset class="campo">
+        <legend>¿Qué es?</legend>
+        <div class="tipos">
+          <label class="tipo"><input type="radio" name="tipo" value="negocio" checked /><span>Negocio</span></label>
+          <label class="tipo"><input type="radio" name="tipo" value="servicio" /><span>Servicio</span></label>
+          <label class="tipo"><input type="radio" name="tipo" value="evento" /><span>Evento</span></label>
+        </div>
+      </fieldset>
+
+      <label class="campo">
+        <span class="campo__et">Nombre <em>obligatorio</em></span>
+        <input class="acceso__input" name="nombre" maxlength="120" required placeholder="Taquería La Esquina" />
+      </label>
+
+      <label class="campo">
+        <span class="campo__et">Categoría</span>
+        <input class="acceso__input" name="categoria" maxlength="60" placeholder="Taquería, plomería, concierto…" />
+      </label>
+
+      <label class="campo">
+        <span class="campo__et">Descripción</span>
+        <textarea class="acceso__input" name="descripcion" maxlength="600" rows="3"
+                  placeholder="Qué ofrece, qué lo hace distinto…"></textarea>
+      </label>
+
+      <div class="campo campo--par">
+        <label>
+          <span class="campo__et">Dirección</span>
+          <input class="acceso__input" name="direccion" maxlength="200" placeholder="Av. Principal 123" />
+        </label>
+        <label>
+          <span class="campo__et">Colonia</span>
+          <input class="acceso__input" name="colonia" maxlength="80" placeholder="Villas del Pedregal" />
+        </label>
+      </div>
+
+      <fieldset class="campo" data-solo-evento hidden>
+        <legend>¿Cuándo?</legend>
+        <div class="campo--par">
+          <label>
+            <span class="campo__et">Empieza</span>
+            <input class="acceso__input" name="inicia_en" type="datetime-local" />
+          </label>
+          <label>
+            <span class="campo__et">Termina</span>
+            <input class="acceso__input" name="termina_en" type="datetime-local" />
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="campo campo--par">
+        <label>
+          <span class="campo__et">Teléfono</span>
+          <input class="acceso__input" name="telefono" maxlength="25" placeholder="443 123 4567" />
+        </label>
+        <label>
+          <span class="campo__et">WhatsApp</span>
+          <input class="acceso__input" name="whatsapp" maxlength="25" placeholder="443 123 4567" />
+        </label>
+      </div>
+
+      <div class="campo campo--par">
+        <label>
+          <span class="campo__et">Horario</span>
+          <input class="acceso__input" name="horario" maxlength="120" placeholder="Lun a Sáb, 9:00 a 18:00" />
+        </label>
+        <label>
+          <span class="campo__et">Sitio web</span>
+          <input class="acceso__input" name="sitio_web" type="url" maxlength="200" placeholder="https://…" />
+        </label>
+      </div>
+
+      <fieldset class="campo">
+        <legend>Ubicación</legend>
+        <p class="campo__ayuda">
+          Toca el mapa para colocar el marcador. Si es un servicio a domicilio sin
+          local fijo, puedes dejarlo sin ubicación.
+        </p>
+        <div class="mapa mapa--picker" data-mapa-picker></div>
+        <div class="picker__pie">
+          <span class="picker__coords" data-coords>Sin ubicación</span>
+          <button class="btn btn--ghost" type="button" data-limpiar hidden>Quitar</button>
+        </div>
+        <input type="hidden" name="lat" /><input type="hidden" name="lng" />
+      </fieldset>
+
+      <fieldset class="campo">
+        <legend data-catalogo-titulo>Catálogo</legend>
+        <p class="campo__ayuda">
+          Agrupa lo que ofreces en secciones: «Cortes», «Instalación», «Primera parte».
+          Cada sección lleva sus propios ítems con precio. Es opcional.
+        </p>
+        <div class="secciones" data-secciones></div>
+        <button class="btn btn--ghost" type="button" data-add-seccion>+ Agregar sección</button>
+      </fieldset>
+
+      <button class="acceso__submit" type="submit" data-submit>Publicar lugar</button>
+    </form>
+  </div>
+</main>
+
+<script src="/agregar.js" defer></script>
+</body>
+</html>

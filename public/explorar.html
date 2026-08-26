@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Explorar — Atarax</title>
+<meta name="description" content="Negocios, servicios y eventos en Villas del Pedregal y Morelia, en lista o en mapa." />
+<meta name="theme-color" content="#12100F" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preload" href="/fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/inter-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/leaflet.css" />
+</head>
+<body class="tiene-barra">
+
+<header class="nav" data-nav>
+  <a class="nav__brand" href="/" aria-label="Atarax, inicio">
+    <svg class="nav__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M4 26V16a12 12 0 0 1 24 0v10" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"/>
+      <path d="M11 26v-9a5 5 0 0 1 10 0v9" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" opacity=".55"/>
+    </svg>
+    <span>Atarax</span>
+  </a>
+  <nav class="nav__actions">
+    <a class="btn btn--solido" href="/agregar">Agregar lugar</a>
+    <a class="btn btn--ghost" href="/entrar" data-auth>Iniciar sesión</a>
+  </nav>
+</header>
+
+<div class="barra">
+  <form class="barra__buscar" role="search" data-buscar>
+    <label class="sr-only" for="q">Buscar</label>
+    <svg class="search__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/>
+      <path d="m16 16 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+    </svg>
+    <input class="barra__input" id="q" name="q" type="search" autocomplete="off"
+           placeholder="Busca por nombre, categoría o colonia…" />
+  </form>
+
+  <div class="filtros" role="group" aria-label="Filtrar por tipo">
+    <button class="chip chip--activo" type="button" data-tipo="">Todo</button>
+    <button class="chip" type="button" data-tipo="negocio">Negocios</button>
+    <button class="chip" type="button" data-tipo="servicio">Servicios</button>
+    <button class="chip" type="button" data-tipo="evento">Eventos</button>
+  </div>
+
+  <div class="modos" role="group" aria-label="Modo de vista">
+    <button class="modo modo--activo" type="button" data-modo="lista" aria-pressed="true">
+      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <path d="M3 5h14M3 10h14M3 15h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      Lista
+    </button>
+    <button class="modo" type="button" data-modo="mapa" aria-pressed="false">
+      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <path d="M7.5 3 3 5v12l4.5-2 5 2L17 15V3l-4.5 2-5-2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M7.5 3v12M12.5 5v12" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".6"/>
+      </svg>
+      Mapa
+    </button>
+  </div>
+</div>
+
+<main class="explorar">
+  <p class="estado" role="status" data-estado>Cargando…</p>
+
+  <section class="vista vista--lista" data-vista="lista">
+    <ul class="lugares" data-lista></ul>
+    <p class="vacio" data-vacio hidden>
+      Todavía no hay nada aquí. <a href="/agregar">Sé el primero en agregar un lugar</a>.
+    </p>
+  </section>
+
+  <section class="vista vista--mapa" data-vista="mapa" hidden>
+    <div class="mapa" data-mapa></div>
+  </section>
+</main>
+
+<script src="/explorar.js" defer></script>
+</body>
+</html>

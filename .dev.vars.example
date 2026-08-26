@@ -3,6 +3,9 @@
 #   npx wrangler secret put GOOGLE_CLIENT_ID
 #   npx wrangler secret put GOOGLE_CLIENT_SECRET
 
+# Clave API de Brevo para el envío del enlace mágico.
+BREVO_API_KEY=""
+
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 

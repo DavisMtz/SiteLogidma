@@ -10,6 +10,7 @@ import { COOKIE_SESION, COOKIE_ESTADO_OAUTH, cookieSesion, cookieBorrarSesion,
 import { crearSesion, cerrarSesion, usuarioDeSesion, usuarioPorEmail } from "./sesiones.js";
 import { crearEnlace, canjearEnlace, correoDeAcceso } from "./enlace-magico.js";
 import { excedeLimite, purgarIntentos } from "./limites.js";
+import { enviarCorreo } from "./correo.js";
 import * as google from "./google.js";
 import { origenCanonico } from "./origen.js";
 
@@ -59,25 +60,9 @@ async function pedirEnlace(request, env, ctx, url) {
   const enlace = `${origenCanonico(env, url)}/entrar/verificar?token=${token}`;
   const { asunto, texto, html } = correoDeAcceso(enlace);
 
-  let entregado = false;
-  if (env.EMAIL) {
-    try {
-      await env.EMAIL.send({
-        to: email,
-        from: { email: `acceso@${env.DOMINIO_CORREO ?? "logidma.com"}`, name: "Atarax" },
-        subject: asunto,
-        text: texto,
-        html,
-      });
-      entregado = true;
-    } catch (err) {
-      // No se filtra el motivo al cliente: revelaría si el buzón existe.
-      console.error("envio_correo_fallido", { message: String(err) });
-    }
-  } else {
-    // Sin binding de correo (desarrollo): el enlace va al log para poder probar.
-    console.log("ENLACE_DE_ACCESO", enlace);
-  }
+  const entregado = await enviarCorreo(env, {
+    para: email, asunto, texto, html, enlaceDev: enlace,
+  });
 
   ctx.waitUntil(purgarIntentos(db));
 

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mis lugares — Atarax</title>
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#12100F" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preload" href="/fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/inter-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<header class="nav">
+  <a class="nav__brand" href="/" aria-label="Atarax, inicio">
+    <svg class="nav__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M4 26V16a12 12 0 0 1 24 0v10" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"/>
+      <path d="M11 26v-9a5 5 0 0 1 10 0v9" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" opacity=".55"/>
+    </svg>
+    <span>Atarax</span>
+  </a>
+  <nav class="nav__actions">
+    <a class="btn btn--solido" href="/agregar">Agregar lugar</a>
+    <a class="btn btn--ghost" href="/explorar">Explorar</a>
+  </nav>
+</header>
+
+<main class="mios">
+  <h1 class="ficha__titulo">Mis lugares</h1>
+  <p class="ficha__desc">Lo que has publicado. Solo tú puedes editarlo.</p>
+
+  <p class="aviso" role="alert" data-error hidden></p>
+  <p class="entrar__ok" role="status" data-ok hidden></p>
+
+  <div class="sesion-requerida" data-necesita-sesion hidden>
+    <p>Necesitas iniciar sesión para ver tus lugares.</p>
+    <a class="btn-google" href="/entrar">Iniciar sesión</a>
+  </div>
+
+  <p class="vacio" data-vacio hidden>
+    Todavía no has publicado nada. <a href="/agregar">Agrega tu primer lugar</a>.
+  </p>
+
+  <ul class="lugares" data-lista></ul>
+</main>
+
+<script src="/mis-lugares.js" defer></script>
+</body>
+</html>

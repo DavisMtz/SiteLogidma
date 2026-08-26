@@ -37,7 +37,7 @@
 
     <p class="hero__ask" data-ask>¿Qué quieres hacer hoy?</p>
 
-    <form class="search" role="search" data-search action="/buscar" method="get">
+    <form class="search" role="search" data-search action="/explorar" method="get">
       <label class="sr-only" for="q">Buscar negocios, servicios y eventos</label>
       <svg class="search__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/>
@@ -52,6 +52,16 @@
         </svg>
       </button>
     </form>
+
+    <p class="hero__salto" data-salto>
+      <a class="explorar-todo" href="/explorar">
+        Ver todo lo que hay
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 12h15m0 0-5.5-5.5M19 12l-5.5 5.5" fill="none" stroke="currentColor"
+                stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </p>
 
     <div class="horizon" aria-hidden="true">
     <!-- Acueducto de Morelia: se dibuja trazo a trazo en la entrada -->
@@ -93,7 +103,7 @@
               <path d="M19 40V29a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v11" fill="none" stroke="currentColor" stroke-width="2" opacity=".55"/>
             </svg>
           </span>
-          <h3 class="card__name">Negocios</h3>
+          <h3 class="card__name"><a class="card__enlace" href="/explorar?tipo=negocio">Negocios</a></h3>
           <p class="card__copy">Comercios y locales del fraccionamiento y de la ciudad.</p>
         </li>
 
@@ -105,7 +115,7 @@
               <circle cx="11.5" cy="31.5" r="1.4" fill="currentColor"/>
             </svg>
           </span>
-          <h3 class="card__name">Servicios</h3>
+          <h3 class="card__name"><a class="card__enlace" href="/explorar?tipo=servicio">Servicios</a></h3>
           <p class="card__copy">Oficios y profesionales de confianza, cerca de ti.</p>
         </li>
 
@@ -121,7 +131,7 @@
               <circle cx="17" cy="34.5" r="2" fill="currentColor" opacity=".4"/>
             </svg>
           </span>
-          <h3 class="card__name">Eventos</h3>
+          <h3 class="card__name"><a class="card__enlace" href="/explorar?tipo=evento">Eventos</a></h3>
           <p class="card__copy">Lo que pasa hoy y lo que viene esta semana.</p>
         </li>
       </ul>
