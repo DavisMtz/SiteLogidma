@@ -711,3 +711,26 @@ textarea.acceso__input { resize: vertical; font-family: var(--font-ui); }
   text-decoration: none;
   border-bottom: 1px solid currentColor;
 }
+
+/* Puente de la portada a Explorar ---------------------------------- */
+.hero__salto { margin: 1.1rem 0 0; }
+
+.explorar-todo {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .55rem .5rem;
+  color: var(--text-muted);
+  font-size: var(--step--1);
+  text-decoration: none;
+  transition: color .25s ease, gap .25s ease;
+}
+.explorar-todo svg { width: 1rem; height: 1rem; }
+.explorar-todo:hover { color: var(--cantera); gap: .7rem; }
+
+/* La tarjeta entera es el área de clic, pero el enlace sigue siendo el
+   título: así el lector de pantalla anuncia un destino con nombre y no
+   una caja sin etiqueta. */
+.card { position: relative; }
+.card__enlace { color: inherit; text-decoration: none; }
+.card__enlace::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
+.card:hover .card__enlace { color: var(--cantera); }
+.card__enlace:focus-visible::after { outline: 2px solid var(--cantera); outline-offset: 3px; }
