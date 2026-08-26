@@ -6,3 +6,5 @@ node_modules/
 # artefacto de build (lo genera npm run build)
 public/main.js
 public/entrar.js
+public/explorar.js
+public/agregar.js

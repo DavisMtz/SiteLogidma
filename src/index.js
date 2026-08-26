@@ -7,6 +7,7 @@
  */
 
 import { rutasAuth } from "./auth/rutas.js";
+import { rutasLugares } from "./lugares/rutas.js";
 
 const SECURITY_HEADERS = {
   "content-security-policy": [
@@ -14,7 +15,7 @@ const SECURITY_HEADERS = {
     "script-src 'self'",
     "style-src 'self'",
     "font-src 'self'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://tile.openstreetmap.org",
     "connect-src 'self'",
     "form-action 'self'",
     "object-src 'none'",
@@ -51,6 +52,9 @@ export default {
       // Autenticación: enlace mágico y Google. Devuelve null si no le toca.
       const auth = await rutasAuth(request, env, ctx, url);
       if (auth) return withSecurityHeaders(auth);
+
+      const lugares = await rutasLugares(request, env, ctx, url);
+      if (lugares) return withSecurityHeaders(lugares);
 
       if (url.pathname.startsWith("/api/")) {
         return withSecurityHeaders(
