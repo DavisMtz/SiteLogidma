@@ -2,8 +2,11 @@
  * Atarax — Worker de borde.
  *
  * Sirve la aplicación desde Static Assets y añade cabeceras de seguridad
- * a cada respuesta. Las rutas /api/* las resuelve el Worker.
+ * a cada respuesta. Las rutas /api/* y las de autenticación las resuelve
+ * el Worker.
  */
+
+import { rutasAuth } from "./auth/rutas.js";
 
 const SECURITY_HEADERS = {
   "content-security-policy": [
@@ -35,7 +38,7 @@ function withSecurityHeaders(response) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     try {
@@ -44,6 +47,10 @@ export default {
           Response.json({ status: "ok", app: "atarax" }),
         );
       }
+
+      // Autenticación: enlace mágico y Google. Devuelve null si no le toca.
+      const auth = await rutasAuth(request, env, ctx, url);
+      if (auth) return withSecurityHeaders(auth);
 
       if (url.pathname.startsWith("/api/")) {
         return withSecurityHeaders(

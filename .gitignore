@@ -4,4 +4,5 @@ node_modules/
 .env
 
 # artefacto de build (lo genera npm run build)
-public/app.js
+public/main.js
+public/entrar.js
